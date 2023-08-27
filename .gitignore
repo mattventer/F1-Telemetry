@@ -1,0 +1,6 @@
+src/build
+storage_testing/
+
+*.ini
+*.pdb
+*.vscode
