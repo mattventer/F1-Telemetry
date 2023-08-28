@@ -45,9 +45,9 @@ public:
     }
 
     // Load n most recent sessions/race weeks (probably want a pointer return)
-    std::vector<SessionStorage::SRaceData> LoadRaceData(const int n = -1)
+    std::vector<SessionStorage::SRaceWeekend> LoadRaceData(const int n = -1)
     {
-        std::vector<SessionStorage::SRaceData> races;
+        std::vector<SessionStorage::SRaceWeekend> races;
         if (mPath.string().empty())
         {
             std::cout << "No storage path specified." << std::endl;
@@ -63,7 +63,7 @@ public:
         int i = 0;
         for (auto race = root->FirstChildElement(sRaceNodeKey); race != nullptr; race = race->NextSiblingElement())
         {
-            SessionStorage::SRaceData newRace;
+            SessionStorage::SRaceWeekend newRace;
             newRace.trackName = race->FirstChildElement("track")->GetText();
 
             // Iterate over sessions within race
@@ -103,7 +103,7 @@ public:
         return races;
     }
 
-    bool StoreRaceData(std::vector<SessionStorage::SRaceData> races, int count)
+    bool StoreRaceData(std::vector<SessionStorage::SRaceWeekend> races, int count)
     {
         if (mPath.string().empty())
         {

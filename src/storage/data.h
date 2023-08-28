@@ -3,6 +3,7 @@
 #include "f123constants.h"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace SessionStorage
@@ -18,7 +19,7 @@ namespace SessionStorage
 
     struct SSessionData
     {
-        F123::ESessionType sessionType;
+        F123::ESessionType sessionType{F123::ESessionType::Unknown};
         std::vector<SLap> laps;
 
         int fastestSec1LapNum{0};
@@ -27,9 +28,9 @@ namespace SessionStorage
         uint8_t fastestLapNum{0};
     };
 
-    struct SRaceData
+    struct SRaceWeekend
     {
-        std::string trackName;
+        std::string trackName{"Unknown"};
         std::vector<SSessionData> sessions;
     };
 }

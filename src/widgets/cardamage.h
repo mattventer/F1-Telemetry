@@ -4,7 +4,7 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "../packets/cardamage.h"
+#include "packets/cardamage.h"
 
 #include <array>
 #include <cstdint>
@@ -48,7 +48,7 @@ public:
     {
         // Display
         auto size = ImGui::GetWindowContentRegionMax();
-        if (ImPlot::BeginPlot("Car Damage", ImVec2(size.x / 2, (size.y / 2) - 30)))
+        if (ImPlot::BeginPlot("Car Damage", ImVec2(size.x / 2, (size.y / 2) - 32), ImPlotFlags_NoLegend))
         {
             static const double positions[] = {0, 1, 2, 3, 4, 5, 6, 7};
             // Configure

@@ -1,9 +1,8 @@
 #pragma once
 
+#include "constants.h"
 #include "imgui.h"
 #include "implot.h"
-
-#include "constants.h"
 
 #include <array>
 #include <cstdint>
@@ -46,7 +45,7 @@ public:
         // Display
         auto size = ImGui::GetWindowContentRegionMax();
         // TODO: magic numbers everywhere
-        if (ImPlot::BeginPlot("Tyre Wear", ImVec2(size.x / 2, (size.y / 2) - 30)))
+        if (ImPlot::BeginPlot("Tyre Wear", ImVec2(size.x / 2, (size.y / 2) - 32), ImPlotFlags_NoLegend))
         {
             const double positions[] = {0, 1, 2, 3};
             // Configure

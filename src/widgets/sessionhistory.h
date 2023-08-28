@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -23,7 +24,7 @@ namespace
     static ImGuiTableFlags sTableFlags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
 
     // TODO: Testing only, use GUI to set
-    const std::filesystem::path sStoragePath = "../storage_testing/racedata.xml";
+    const std::filesystem::path sStoragePath = "data/f123history.xml";
 }
 
 class CSessionHistory
@@ -43,9 +44,9 @@ public:
         }
 
         // // For testing
-        // SRaceData dummyRace1;
+        // SRaceWeekend dummyRace1;
         // dummyRace1.trackName = "TrackName1";
-        // SRaceData dummyRace2;
+        // SRaceWeekend dummyRace2;
         // dummyRace2.trackName = "TrackName2";
 
         // SSessionData practiceSession1;
@@ -62,22 +63,31 @@ public:
         // {
         //     SLap newLap;
         //     newLap.lapNumber = i;
-        //     newLap.sector1MS = i * 10000;
-        //     newLap.sector2MS = i * 11000;
-        //     newLap.totalLapTime = i * 20000;
+        //     newLap.sector1MS = i * 10980;
+        //     newLap.sector2MS = i * 11650;
+        //     newLap.sector3MS = i * 12650;
+        //     newLap.totalLapTime = i * 15255;
 
         //     practiceSession1.laps.push_back(newLap);
-        //     practiceSession1.fastestLapNum = 1;
         //     practiceSession2.laps.push_back(newLap);
-        //     practiceSession2.fastestLapNum = 1;
 
         //     raceSession.laps.push_back(newLap);
-        //     raceSession.fastestLapNum = 1;
         // }
+
+        // practiceSession1.fastestLapNum = 7;
+        // practiceSession1.fastestSec1LapNum = 2;
+        // practiceSession1.fastestSec2LapNum = 7;
+        // practiceSession1.fastestSec3LapNum = 5;
+        // practiceSession2.fastestLapNum = 1;
+        // practiceSession2.fastestSec1LapNum = 2;
+        // practiceSession2.fastestSec2LapNum = 7;
+        // practiceSession2.fastestSec3LapNum = 5;
+        // raceSession.fastestLapNum = 4;
 
         // dummyRace1.sessions.push_back(practiceSession1);
         // dummyRace1.sessions.push_back(practiceSession2);
         // dummyRace1.sessions.push_back(raceSession);
+
         // dummyRace2.sessions.push_back(practiceSession1);
         // dummyRace2.sessions.push_back(practiceSession2);
         // dummyRace2.sessions.push_back(raceSession);
@@ -156,7 +166,7 @@ public:
 
     void StartSession(const ETrackId trackId, const ESessionType sessionType)
     {
-        mRecordRaces = true;
+        mRecord = true;
         auto trackName = sTrackIdToString.at(trackId);
 
         SessionStorage::SSessionData newSession;
@@ -164,50 +174,56 @@ public:
         // Continuing previous week (may be practice/qual/race)
         if (!mRaces.empty() && mRaces.at(mRaces.size() - 1).trackName == trackName)
         {
-            // Push a new session for most recent race
-            mRaces.at(mRaces.size() - 1).sessions.push_back(newSession);
+            auto sessions = mRaces.at(mRaces.size() - 1).sessions;
+            // Push a new session if one doesn't already exist
+            if (sessions.size() < 1 || sessions.at(sessions.size() - 1).sessionType != sessionType)
+            {
+                mRaces[mRaces.size() - 1].sessions.push_back(newSession);
+            }
         }
         else
         {
             // New race week, new session
-            SessionStorage::SRaceData newRace;
-            newRace.trackName = trackName;
-            newRace.sessions.push_back(newSession);
-            mRaces.push_back(newRace);
+            SessionStorage::SRaceWeekend newWeekend;
+            newWeekend.trackName = trackName;
+            newWeekend.sessions.push_back(newSession);
+            mRaces.push_back(newWeekend);
         }
+    }
+
+    void SetFonts(ImFont *tableHeader, ImFont *raceHeader, ImFont *sessionHeader, ImFont *general)
+    {
+        mTableHeaderFont = tableHeader;
+        mRaceHeaderFont = raceHeader;
+        mSessionHeaderFont = sessionHeader;
+        mGeneralTableFont = general;
     }
 
     void StopSession()
     {
-        mRecordRaces = false;
+        mRecord = false;
     }
 
     bool SessionActive()
     {
-        return mRecordRaces;
+        return mRecord;
     }
 
     void ShowSessionHistory(bool *p_open)
     {
         IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
         static int clicked = 0;
-
-        if (ImGui::Button("Save"))
-            clicked++;
-        if (clicked & 1)
-        {
-            std::cout << "Save clicked" << std::endl;
-            StoreSessionHistory();
-            clicked = 0;
-        }
         if (ImGui::BeginTable("SessionHistory", 5, sTableFlags))
         {
+            ImGui::PushFont(mTableHeaderFont);
             ImGui::TableSetupColumn("Track", ImGuiTableColumnFlags_NoHide);
             ImGui::TableSetupColumn("Sector 1");
             ImGui::TableSetupColumn("Sector 2");
             ImGui::TableSetupColumn("Sector 3");
             ImGui::TableSetupColumn("Lap Time");
             ImGui::TableHeadersRow();
+
+            ImGui::PopFont();
 
             if (mRaces.empty())
             {
@@ -230,7 +246,9 @@ public:
                 }
 
                 // Entire race week (Track name)
+                ImGui::PushFont(mRaceHeaderFont);
                 bool open = ImGui::TreeNodeEx(race->trackName.c_str(), flags);
+                ImGui::PopFont();
                 if (open)
                 {
                     // Each session within the week, most recent last
@@ -246,12 +264,17 @@ public:
                         {
                             sessionFlags |= ImGuiTreeNodeFlags_DefaultOpen;
                         }
+
+                        ImGui::PushFont(mSessionHeaderFont);
                         bool open = ImGui::TreeNodeEx(sSessionTypeToString.at(session->sessionType).c_str(), sessionFlags);
+                        ImGui::PopFont();
                         if (open)
                         {
                             // Lap info of session
                             for (auto lap = session->laps.begin(); lap != session->laps.end(); ++lap)
                             {
+                                ImGui::PushFont(mGeneralTableFont);
+
                                 ImGui::TableNextRow();
                                 ImGui::TableNextColumn();
                                 ImGui::Text("L%d", lap->lapNumber);
@@ -285,6 +308,7 @@ public:
                                 auto seconds = lap->totalLapTime / 1000.0f;
                                 int min = seconds / 60;
                                 ImGui::Text("%d:%06.3f", min, seconds - (min * 60));
+                                ImGui::PopFont();
                             }
                             ImGui::TreePop();
                         }
@@ -295,6 +319,15 @@ public:
                 raceWeek++;
             }
             ImGui::EndTable();
+            ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 48);
+            if (ImGui::Button("Save"))
+                clicked++;
+            if (clicked & 1)
+            {
+                std::cout << "Save clicked" << std::endl;
+                StoreSessionHistory();
+                clicked = 0;
+            }
         }
     }
 
@@ -310,6 +343,12 @@ private:
     uint32_t mRacesLoaded{0}; // Number loaded from storage
 
     // Local race history
-    bool mRecordRaces{false};
-    std::vector<SessionStorage::SRaceData> mRaces;
+    bool mRecord{false};
+    std::vector<SessionStorage::SRaceWeekend> mRaces;
+
+    // Fonts
+    ImFont *mTableHeaderFont;
+    ImFont *mRaceHeaderFont;
+    ImFont *mSessionHeaderFont;
+    ImFont *mGeneralTableFont;
 };

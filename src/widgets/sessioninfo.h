@@ -24,6 +24,11 @@ public:
     {
     }
 
+    void SetFont(ImFont *font)
+    {
+        mFont = font;
+    }
+
     void SessionStarted()
     {
         mSessionActive = true;
@@ -48,25 +53,30 @@ public:
 
     void ShowSessionStatus() const
     {
-        ImGui::Text("Port:");
+        ImGui::SetCursorPosY(ImGui::GetWindowContentRegionMax().y - 23);
+        ImGui::Separator();
+        ImGui::SetCursorPosY(ImGui::GetWindowContentRegionMax().y - 17);
+        ImGui::PushFont(mFont);
+        ImGui::Text("Listening port:");
         ImGui::SameLine();
         ImGui::Text(std::to_string(mPort).c_str()); // gross
         ImGui::SameLine();
         ImGui::Text(mLastPacketTime.c_str());
         ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 122);
+
+        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 120);
         ImGui::Text("Session:");
         ImGui::SameLine();
         ImGui::TextColored((mSessionActive ? green : red),
                            (mSessionActive ? "Active" : "Inactive")); // From constants.h
-        ImGui::SameLine();
-        ImGui::SetCursorPosY(topPadding);
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x / 2);
-        ImGui::Separator();
+        ImGui::PopFont();
     }
 
 private:
     bool mSessionActive{false};
     std::string mLastPacketTime{"Never"};
     int mPort{-1};
+
+    // Style
+    ImFont *mFont;
 };

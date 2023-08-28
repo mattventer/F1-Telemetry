@@ -286,10 +286,24 @@ int main()
                         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
                         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
+    // Load fonts
+    auto defaultFont = io.Fonts->AddFontDefault();
+    auto mainTabsFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 20.0f);
+
+    // Session history tab fonts
+    auto tableHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/TitilliumWeb-Bold.ttf", 30.0f);
+    auto raceHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 18.0f);
+    auto sessionHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 17.0f);
+    auto generalTableFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 16.5f);
+    sSessionHistory->SetFonts(tableHeaderFont, raceHeaderFont, sessionHeaderFont, generalTableFont);
+
+    auto sessionInfoFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 16.0f);
+    sSessionInfo->SetFont(sessionInfoFont);
+
     // Our state
     static bool show_dashboard_window = true;
     static bool show_history_window = true;
-    static bool show_demo_window = false;
+    static bool show_demo_windows = false;
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -331,6 +345,8 @@ int main()
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 
+        ImGui::PushFont(mainTabsFont);
+
         // Main body of the window starts here.
         if (!ImGui::Begin("Main", &done, mainWindowFlags))
         {
@@ -338,9 +354,6 @@ int main()
             ImGui::End();
             return -1;
         }
-
-        // Always show
-        sSessionInfo->ShowSessionStatus();
 
         if (ImGui::BeginTabBar("MainTabs"))
         {
@@ -356,18 +369,22 @@ int main()
                 sSessionHistory->ShowSessionHistory(&show_history_window);
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("ImGui Demo"))
+            if (show_demo_windows && ImGui::BeginTabItem("ImGui Demo"))
             {
                 ImGui::ShowDemoWindow();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("ImPlot Demo"))
+            if (show_demo_windows && ImGui::BeginTabItem("ImPlot Demo"))
             {
                 ImPlot::ShowDemoWindow();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
         }
+        ImGui::PopFont();
+
+        // Always show
+        sSessionInfo->ShowSessionStatus();
 
         ImGui::PopStyleVar();
         ImGui::End();

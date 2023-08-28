@@ -52,7 +52,7 @@ public:
         {
             title += " | Compound: " + mActualTyreCompoundStr + " (" + mVisualTyreCompoundStr + ")";
         }
-        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, (size.y / 2) - (30))))
+        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, (size.y / 2) - (30)), ImPlotFlags_NoLegend))
         {
             const double positions[] = {0, 1, 2, 3};
             // Configure
