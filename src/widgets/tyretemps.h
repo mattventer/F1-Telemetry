@@ -4,7 +4,7 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "f122constants.h"
+#include "f123constants.h"
 #include "packets/session.h"
 
 #include <array>
@@ -25,13 +25,13 @@ public:
         mAxisFlagsY |= ImPlotAxisFlags_NoSideSwitch;
     }
 
-    void SetTyreCompound(F122::EActualTyreCompound actual, F122::EVisualTyreCompound visual)
+    void SetTyreCompound(F123::EActualTyreCompound actual, F123::EVisualTyreCompound visual)
     {
         mActualCompound = actual;
-        mActualTyreCompoundStr = F122::sActualTyreCompoundToString.at(actual);
+        mActualTyreCompoundStr = F123::sActualTyreCompoundToString.at(actual);
 
         mVisualTyreCompound = visual;
-        mVisualTyreCompoundStr = F122::sVisualTyreCompoundToString.at(visual);
+        mVisualTyreCompoundStr = F123::sVisualTyreCompoundToString.at(visual);
     }
 
     void SetTyreInnerTemps(const std::array<uint8_t, 4> tyreTempData)
@@ -48,7 +48,7 @@ public:
         const int item_count = 4;
         auto size = ImGui::GetWindowContentRegionMax();
         std::string title = "Tyre Inner Temp (C)";
-        if (mActualCompound != F122::EActualTyreCompound::Unknown)
+        if (mActualCompound != F123::EActualTyreCompound::Unknown)
         {
             title += " | Compound: " + mActualTyreCompoundStr + " (" + mVisualTyreCompoundStr + ")";
         }
@@ -75,9 +75,9 @@ public:
 private:
     ImPlotAxisFlags mAxisFlagsX{0};
     ImPlotAxisFlags mAxisFlagsY{0};
-    F122::EActualTyreCompound mActualCompound{F122::EActualTyreCompound::Unknown};
+    F123::EActualTyreCompound mActualCompound{F123::EActualTyreCompound::Unknown};
     std::string mActualTyreCompoundStr{""};
-    F122::EVisualTyreCompound mVisualTyreCompound{F122::EVisualTyreCompound::Unknown};
+    F123::EVisualTyreCompound mVisualTyreCompound{F123::EVisualTyreCompound::Unknown};
     std::string mVisualTyreCompoundStr{""};
 
     uint8_t mTyreInnerTemps[4] = {0, 0, 0, 0};

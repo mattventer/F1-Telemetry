@@ -70,7 +70,7 @@ public:
             for (auto session = race->FirstChildElement(sSessionNodeKey); session != nullptr; session = session->NextSiblingElement())
             {
                 SessionStorage::SSessionData newSession;
-                newSession.sessionType = static_cast<F122::ESessionType>(session->UnsignedAttribute("type"));
+                newSession.sessionType = static_cast<F123::ESessionType>(session->UnsignedAttribute("type"));
                 newSession.fastestLapNum = static_cast<uint8_t>(session->FirstChildElement(sFastestLapNumNodeKey)->UnsignedText());
                 newSession.fastestSec1LapNum = static_cast<uint8_t>(session->FirstChildElement(sFastestSec1LapNumNodeKey)->UnsignedText());
                 newSession.fastestSec2LapNum = static_cast<uint8_t>(session->FirstChildElement(sFastestSec2LapNumNodeKey)->UnsignedText());

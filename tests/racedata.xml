@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RaceHistory>
+    <Race>
+        <track>Las Vegas</track>
+        <session type="1">
+            <fastestSec1LapNum>3</fastestSec1LapNum>
+            <fastestSec2LapNum>3</fastestSec2LapNum>
+            <fastestSec3LapNum>3</fastestSec3LapNum>
+            <fastestLapNum>3</fastestLapNum>
+            <lap num="1">
+                <time>93340</time>
+                <sector1MS>45368</sector1MS>
+                <sector2MS>25777</sector2MS>
+                <sector3MS>22194</sector3MS>
+            </lap>
+            <lap num="2">
+                <time>93664</time>
+                <sector1MS>45523</sector1MS>
+                <sector2MS>25775</sector2MS>
+                <sector3MS>22365</sector3MS>
+            </lap>
+            <lap num="3">
+                <time>92721</time>
+                <sector1MS>44936</sector1MS>
+                <sector2MS>25611</sector2MS>
+                <sector3MS>22174</sector3MS>
+            </lap>
+            <lap num="4">
+                <time>0</time>
+                <sector1MS>0</sector1MS>
+                <sector2MS>0</sector2MS>
+                <sector3MS>0</sector3MS>
+            </lap>
+        </session>
+        <session type="3">
+            <fastestSec1LapNum>1</fastestSec1LapNum>
+            <fastestSec2LapNum>1</fastestSec2LapNum>
+            <fastestSec3LapNum>1</fastestSec3LapNum>
+            <fastestLapNum>1</fastestLapNum>
+            <lap num="1">
+                <time>92979</time>
+                <sector1MS>44716</sector1MS>
+                <sector2MS>25957</sector2MS>
+                <sector3MS>22305</sector3MS>
+            </lap>
+            <lap num="2">
+                <time>0</time>
+                <sector1MS>0</sector1MS>
+                <sector2MS>0</sector2MS>
+                <sector3MS>0</sector3MS>
+            </lap>
+        </session>
+        <session type="9">
+            <fastestSec1LapNum>1</fastestSec1LapNum>
+            <fastestSec2LapNum>1</fastestSec2LapNum>
+            <fastestSec3LapNum>1</fastestSec3LapNum>
+            <fastestLapNum>1</fastestLapNum>
+            <lap num="1">
+                <time>91953</time>
+                <sector1MS>44457</sector1MS>
+                <sector2MS>25578</sector2MS>
+                <sector3MS>21917</sector3MS>
+            </lap>
+            <lap num="2">
+                <time>0</time>
+                <sector1MS>0</sector1MS>
+                <sector2MS>0</sector2MS>
+                <sector3MS>0</sector3MS>
+            </lap>
+        </session>
+        <session type="10">
+            <fastestSec1LapNum>2</fastestSec1LapNum>
+            <fastestSec2LapNum>1</fastestSec2LapNum>
+            <fastestSec3LapNum>1</fastestSec3LapNum>
+            <fastestLapNum>2</fastestLapNum>
+            <lap num="1">
+                <time>97765</time>
+                <sector1MS>49517</sector1MS>
+                <sector2MS>25840</sector2MS>
+                <sector3MS>22407</sector3MS>
+            </lap>
+            <lap num="2">
+                <time>93656</time>
+                <sector1MS>45006</sector1MS>
+                <sector2MS>25932</sector2MS>
+                <sector3MS>22717</sector3MS>
+            </lap>
+            <lap num="3">
+                <time>102464</time>
+                <sector1MS>48076</sector1MS>
+                <sector2MS>30837</sector2MS>
+                <sector3MS>23551</sector3MS>
+            </lap>
+            <lap num="4">
+                <time>133893</time>
+                <sector1MS>4298</sector1MS>
+                <sector2MS>38060</sector2MS>
+                <sector3MS>31535</sector3MS>
+            </lap>
+            <lap num="5">
+                <time>0</time>
+                <sector1MS>0</sector1MS>
+                <sector2MS>0</sector2MS>
+                <sector3MS>0</sector3MS>
+            </lap>
+        </session>
+    </Race>
+</RaceHistory>

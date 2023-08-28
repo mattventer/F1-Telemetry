@@ -1,6 +1,6 @@
 #pragma once
 
-#include "f122constants.h"
+#include "f123constants.h"
 
 #include <cstdint>
 #include <vector>
@@ -18,7 +18,7 @@ namespace SessionStorage
 
     struct SSessionData
     {
-        F122::ESessionType sessionType;
+        F123::ESessionType sessionType;
         std::vector<SLap> laps;
 
         int fastestSec1LapNum{0};

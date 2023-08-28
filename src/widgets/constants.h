@@ -1,7 +1,7 @@
 #pragma once
 
 #include "imgui.h"
-#include "../f122constants.h"
+#include "../f123constants.h"
 
 #include <cstdint>
 
@@ -198,25 +198,25 @@ namespace
         return red;
     }
 
-    static const ImVec4 TyreInnerTempToColor(const F122::EActualTyreCompound compound, const uint8_t &temp)
+    static const ImVec4 TyreInnerTempToColor(const F123::EActualTyreCompound compound, const uint8_t &temp)
     {
         switch (compound)
         {
-        case F122::EActualTyreCompound::C5:
+        case F123::EActualTyreCompound::C5:
             return TyreInnerTempToColorC5(temp);
-        case F122::EActualTyreCompound::C4:
+        case F123::EActualTyreCompound::C4:
             return TyreInnerTempToColorC4(temp);
-        case F122::EActualTyreCompound::C3:
+        case F123::EActualTyreCompound::C3:
             return TyreInnerTempToColorC3(temp);
-        case F122::EActualTyreCompound::C2:
+        case F123::EActualTyreCompound::C2:
             return TyreInnerTempToColorC2(temp);
-        case F122::EActualTyreCompound::C1:
+        case F123::EActualTyreCompound::C1:
             [[fallthrough]];
-        case F122::EActualTyreCompound::C0:
+        case F123::EActualTyreCompound::C0:
             return TyreInnerTempToColorC1C0(temp);
-        case F122::EActualTyreCompound::Inter:
+        case F123::EActualTyreCompound::Inter:
             return TyreInnerTempToColorInter(temp);
-        case F122::EActualTyreCompound::Wet:
+        case F123::EActualTyreCompound::Wet:
             return TyreInnerTempToColorWet(temp);
         default:
             return blue; // Just to have something

@@ -1,9 +1,10 @@
-src/build
+build/
 storage_testing/
 
 *.ini
 *.pdb
 *.vscode
+
 # Prerequisites
 *.d
 

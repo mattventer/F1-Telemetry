@@ -4,7 +4,7 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "packets/cardamage.h"
+#include "../packets/cardamage.h"
 
 #include <array>
 #include <cstdint>
