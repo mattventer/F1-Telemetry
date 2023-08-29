@@ -319,7 +319,7 @@ public:
                 raceWeek++;
             }
             ImGui::EndTable();
-            ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 48);
+            ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - 35);
             if (ImGui::Button("Save"))
                 clicked++;
             if (clicked & 1)

@@ -21,16 +21,20 @@ namespace
     static float mMaxDelta{0.01f};
 }
 
-class CLapData
+class CLapDeltas
 {
 public:
-    CLapData()
+    CLapDeltas()
     {
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_AutoFit;
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
+        mAxisFlagsX |= ImPlotAxisFlags_NoMenus;
+        mAxisFlagsX |= ImPlotCond_Always;
 
+        mAxisFlagsY |= ImPlotAxisFlags_NoMenus;
+        mAxisFlagsY |= ImPlotCond_Always;
         // For testing
         // SRaceWeekend dummyRace1;
         // dummyRace1.trackName = "TrackName1";
@@ -87,17 +91,15 @@ public:
         memset(mDeltas, 0.0f, sizeof(mDeltas));
     }
 
-    // TODO: magic numbers everywhere
-    void ShowDeltas() const
+    void ShowDeltas(const ImVec2 spaceAvail) const
     {
-        // ImPlotScale_Time TODO: could probably use this
-        auto size = ImGui::GetWindowContentRegionMax();
         if (mCarRacePosition > 1)
         {
-            if (ImPlot::BeginPlot("Delta to leader", ImVec2(-1, (size.y / 2) - 32), ImPlotFlags_NoLegend))
+            if (ImPlot::BeginPlot("Delta leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
             {
                 // Configure
                 ImPlot::SetupAxisLimits(ImAxis_Y1, 0, mMaxDelta * 1.5f, ImPlotCond_Always);
+                ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
                 ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
                 ImPlot::SetNextLineStyle(red, 3);
                 ImPlot::PlotLine("Delta Leader (s)", mXaxis, mDeltas, mDataCount);
@@ -106,10 +108,11 @@ public:
         }
         else
         {
-            if (ImPlot::BeginPlot("Delta to car behind", ImVec2(-1, (size.y / 2) - 32), ImPlotFlags_NoLegend))
+            if (ImPlot::BeginPlot("Delta to car behind", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
             {
                 // Configure
                 ImPlot::SetupAxisLimits(ImAxis_Y1, 0, mMaxDelta * 1.5f, ImPlotCond_Always);
+                ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
                 ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
                 ImPlot::SetNextLineStyle(green, 3);
                 ImPlot::PlotLine("Delta Car behind (s)", mXaxis, mDeltas, mDataCount, (ImPlotLineFlags_SkipNaN));

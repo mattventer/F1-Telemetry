@@ -3,7 +3,8 @@
 #include "imgui.h"
 
 #include "../widgets/cardamage.h"
-#include "../widgets/lapdata.h"
+#include "../widgets/lapdeltas.h"
+#include "../widgets/lapinfoheader.h"
 #include "../widgets/sessioninfo.h"
 #include "../widgets/tyretemps.h"
 #include "../widgets/tyrewear.h"
@@ -17,29 +18,36 @@ public:
     CDashboard(const std::shared_ptr<CTyreWearGraph> &tyreWearGraph,
                const std::shared_ptr<CTyreTemps> &tyreTemps,
                const std::shared_ptr<CCarDamageGraph> &carDamageGraph,
-               const std::shared_ptr<CLapData> &lapData)
-        : mTyreWearGraph(tyreWearGraph), mCarDamageGraph(carDamageGraph), mTyreTemps(tyreTemps), mLapData(lapData)
+               const std::shared_ptr<CLapDeltas> &lapDeltas,
+               const std::shared_ptr<CLapInfoHeader> &lapInfoHeader)
+        : mTyreWearGraph(tyreWearGraph), mCarDamageGraph(carDamageGraph), mTyreTemps(tyreTemps), mLapDeltas(lapDeltas), mLapInfoHeader(lapInfoHeader)
     {
-        mWindowFlags |= ImGuiWindowFlags_NoTitleBar;
-        mWindowFlags |= ImGuiWindowFlags_NoMove;
-        mWindowFlags |= ImGuiWindowFlags_NoResize;
     }
-    void ShowWindow(bool *p_open)
+    void ShowWindow(const ImVec2 spaceAvail)
     {
         IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
-        mCarDamageGraph->ShowGraph();
+        auto spaceAvailDash = spaceAvail;
+        spaceAvailDash.x -= 15; // Not sure why. Gap between graphs? Tab window padding?
+        if (mLapInfoHeader->CurrentLap() > 0)
+        {
+            auto posY = mLapInfoHeader->ShowLapInfoHeader();
+            spaceAvailDash.y -= (posY / 2);
+        }
+        // Top row
+        mCarDamageGraph->ShowGraph(spaceAvailDash);
         ImGui::SameLine();
-        mTyreTemps->ShowTyreInnerTemps();
-        mTyreWearGraph->ShowGraph();
+        mTyreTemps->ShowTyreInnerTemps(spaceAvailDash);
+
+        // Bottom row
+        mTyreWearGraph->ShowGraph(spaceAvailDash);
         ImGui::SameLine();
-        mLapData->ShowDeltas();
+        mLapDeltas->ShowDeltas(spaceAvailDash);
     }
 
 private:
     const std::shared_ptr<CTyreTemps> mTyreTemps;
     const std::shared_ptr<CTyreWearGraph> mTyreWearGraph;
     const std::shared_ptr<CCarDamageGraph> mCarDamageGraph;
-    const std::shared_ptr<CLapData> mLapData;
-
-    ImGuiWindowFlags mWindowFlags{0};
+    const std::shared_ptr<CLapDeltas> mLapDeltas;
+    const std::shared_ptr<CLapInfoHeader> mLapInfoHeader;
 };

@@ -19,8 +19,11 @@ public:
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
         mAxisFlagsX |= ImPlotAxisFlags_Lock;
+        mAxisFlagsX |= ImPlotAxisFlags_NoMenus;
         mAxisFlagsX |= ImPlotAxisFlags_NoSideSwitch;
 
+        mAxisFlagsY |= ImPlotAxisFlags_NoTickMarks;
+        mAxisFlagsY |= ImPlotAxisFlags_NoMenus;
         mAxisFlagsY |= ImPlotAxisFlags_Lock;
         mAxisFlagsY |= ImPlotAxisFlags_NoSideSwitch;
     }
@@ -43,16 +46,15 @@ public:
     }
 
     // TODO: magic numbers everywhere
-    void ShowTyreInnerTemps() const
+    void ShowTyreInnerTemps(const ImVec2 spaceAvail) const
     {
         const int item_count = 4;
-        auto size = ImGui::GetWindowContentRegionMax();
         std::string title = "Tyre Inner Temp (C)";
         if (mActualCompound != F123::EActualTyreCompound::Unknown)
         {
             title += " | Compound: " + mActualTyreCompoundStr + " (" + mVisualTyreCompoundStr + ")";
         }
-        if (ImPlot::BeginPlot(title.c_str(), ImVec2(-1, (size.y / 2) - (30)), ImPlotFlags_NoLegend))
+        if (ImPlot::BeginPlot(title.c_str(), ImVec2(spaceAvail.x / 2, (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
         {
             const double positions[] = {0, 1, 2, 3};
             // Configure

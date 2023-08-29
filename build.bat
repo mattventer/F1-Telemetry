@@ -9,7 +9,7 @@ mkdir build
 cl /std:c++17 /nologo /Zi /MD /utf-8 %INCLUDES% /D ImTextureID=ImU64 /D UNICODE /D _UNICODE %SOURCES% /Fe%OUT_DIR%/%OUT_EXE%.exe /Fo%OUT_DIR%/ /link %LIBS%
 
 @REM copy resources to build folder
-ROBOCOPY src\misc\fonts\ %OUT_DIR%\misc\fonts\ /mir /njs /njh
-ROBOCOPY src\storage\ %OUT_DIR%\data\ f123history.xml /njs /njh
+ROBOCOPY /mir /njs /njh src\misc\fonts\ %OUT_DIR%\misc\fonts\ 
+ROBOCOPY /xo /njs /njh src\storage\ %OUT_DIR%\data\ f123history.xml
 
-@REM  /subsystem:windows /entry:mainCRTStartup
+@REM  Hide console: /subsystem:windows /entry:mainCRTStartup

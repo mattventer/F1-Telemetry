@@ -19,7 +19,9 @@ public:
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
         mAxisFlagsX |= ImPlotAxisFlags_Lock;
         mAxisFlagsX |= ImPlotAxisFlags_NoSideSwitch;
+        mAxisFlagsX |= ImPlotAxisFlags_NoMenus;
 
+        mAxisFlagsY |= ImPlotAxisFlags_NoMenus;
         mAxisFlagsY |= ImPlotAxisFlags_Lock;
         mAxisFlagsY |= ImPlotAxisFlags_NoSideSwitch;
     }
@@ -44,11 +46,10 @@ public:
         }
     }
 
-    void ShowGraph() const
+    void ShowGraph(const ImVec2 spaceAvail) const
     {
         // Display
-        auto size = ImGui::GetWindowContentRegionMax();
-        if (ImPlot::BeginPlot("Car Damage", ImVec2(size.x / 2, (size.y / 2) - 32), ImPlotFlags_NoLegend))
+        if (ImPlot::BeginPlot("Car Damage", ImVec2(spaceAvail.x / 2, (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
         {
             static const double positions[] = {0, 1, 2, 3, 4, 5, 6, 7};
             // Configure
@@ -64,7 +65,6 @@ public:
                 ImPlot::SetNextFillStyle(CarDamageToColor(mCarDamageData[i]));
                 ImPlot::PlotBars(mLabels[i], &mCarDamageData[i], 1, 0.95, i);
             }
-
             ImPlot::EndPlot();
         }
     }

@@ -12,6 +12,7 @@ namespace
     constexpr int sMaxY = 100;
 
     const ImVec4 blue = ImVec4(26.0f / 255.0f, 198.0f / 255.0f, 255.0f / 255.0f, 50.0f);
+    const ImVec4 teal = ImVec4(17.0f / 255.0f, 219.0f / 255.0f, 194.0f / 255.0f, 50.0f);
     const ImVec4 green = ImVec4(97.0f / 255.0f, 198.0f / 255.0f, 36.0f / 255.0f, 50.0f);
     const ImVec4 yellow = ImVec4(247.0f / 255.0f, 224.0f / 255.0f, 31.0f / 255.0f, 50.0f);
     const ImVec4 orange = ImVec4(247.0f / 255.0f, 177.0f / 255.0f, 31.0f / 255.0f, 50.0f);

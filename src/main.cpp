@@ -20,7 +20,8 @@
 #include "udpserver.h"
 #include "windows/dashboard.h"
 #include "widgets/cardamage.h"
-#include "widgets/lapdata.h"
+#include "widgets/lapdeltas.h"
+#include "widgets/lapinfoheader.h"
 #include "widgets/sessionhistory.h"
 #include "widgets/sessioninfo.h"
 #include "widgets/tyrewear.h"
@@ -49,10 +50,11 @@ const auto sSessionHistory = std::make_shared<CSessionHistory>();
 const auto sTyreTemps = std::make_shared<CTyreTemps>();
 const auto sTyreWearGraph = std::make_shared<CTyreWearGraph>();
 const auto sCarDamageGraph = std::make_shared<CCarDamageGraph>();
-const auto sLapData = std::make_shared<CLapData>();
+const auto sLapDeltas = std::make_shared<CLapDeltas>();
+const auto sLapInfoHeader = std::make_shared<CLapInfoHeader>();
 
 // Windows
-const auto sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapData);
+const auto sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
 
 struct FrameContext
 {
@@ -181,16 +183,21 @@ void ParsePacket(char *buffer, int n)
         lapData.get(buffer);
         const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
         SLapData carBehind;
-        for (int i = 0; i < 22; ++i)
+        if (myRacePosition < 21)
         {
-            if (lapData.lapData[i].carPosition == myRacePosition + 1)
+            for (int i = 0; i < 22; ++i)
             {
-                carBehind = lapData.lapData[i];
-                break;
+                if (lapData.lapData[i].carPosition == myRacePosition + 1)
+                {
+                    carBehind = lapData.lapData[i];
+                    break;
+                }
             }
         }
+
         sSessionInfo->SessionStarted();
-        sLapData->SetLapData(lapData.lapData[playerIdx], carBehind);
+        sLapDeltas->SetLapData(lapData.lapData[playerIdx], carBehind);
+        sLapInfoHeader->SetCurrentLap(lapData.lapData[playerIdx].currentLapNum);
         break;
     }
     case EPacketId::Session:
@@ -206,6 +213,7 @@ void ParsePacket(char *buffer, int n)
         {
             sSessionHistory->StartSession(trackId, sessionType);
         }
+        sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
         break;
     }
     case EPacketId::SessionHistory:
@@ -226,11 +234,12 @@ void ParsePacket(char *buffer, int n)
         {
         case EEventCode::SessionStarted:
             sSessionInfo->SessionStarted();
-            sLapData->ResetLapData();
+            sLapDeltas->ResetLapData();
             break;
         case EEventCode::SessionEnded:
             sSessionInfo->SessionStopped();
             sSessionHistory->StopSession();
+            sLapInfoHeader->SetPitLapWindow(0, 0, 0);
             break;
         default:
             break;
@@ -301,7 +310,6 @@ int main()
     sSessionInfo->SetFont(sessionInfoFont);
 
     // Our state
-    static bool show_dashboard_window = true;
     static bool show_history_window = true;
     static bool show_demo_windows = false;
 
@@ -344,10 +352,8 @@ int main()
         mainWindowFlags |= ImGuiWindowFlags_NoResize;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-
         ImGui::PushFont(mainTabsFont);
 
-        // Main body of the window starts here.
         if (!ImGui::Begin("Main", &done, mainWindowFlags))
         {
             // Early out if the window is collapsed, as an optimization.
@@ -355,13 +361,20 @@ int main()
             return -1;
         }
 
+        // Always show at bottom
+        sSessionInfo->ShowSessionStatus();
+        auto ySpaceConsumed = 62.0f; // TODO: Magic Y-offset number
+        ImGui::SetCursorPos(ImGui::GetCursorStartPos());
+
         if (ImGui::BeginTabBar("MainTabs"))
         {
-            ImGui::SetNextWindowSize(ImGui::GetWindowContentRegionMax());
+            auto spaceAvail = ImGui::GetContentRegionMax();
+            spaceAvail.y -= ySpaceConsumed;
+            ImGui::SetNextWindowSize(spaceAvail);
 
             if (ImGui::BeginTabItem("Live"))
             {
-                sDashboard->ShowWindow(&show_dashboard_window);
+                sDashboard->ShowWindow(spaceAvail);
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("History"))
@@ -382,9 +395,6 @@ int main()
             ImGui::EndTabBar();
         }
         ImGui::PopFont();
-
-        // Always show
-        sSessionInfo->ShowSessionStatus();
 
         ImGui::PopStyleVar();
         ImGui::End();
