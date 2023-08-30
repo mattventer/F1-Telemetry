@@ -10,6 +10,6 @@ cl /std:c++17 /nologo /Zi /MD /utf-8 %INCLUDES% /D ImTextureID=ImU64 /D UNICODE 
 
 @REM copy resources to build folder
 ROBOCOPY /mir /njs /njh src\misc\fonts\ %OUT_DIR%\misc\fonts\ 
-ROBOCOPY /xo /njs /njh src\storage\ %OUT_DIR%\data\ f123history.xml
+@REM ROBOCOPY /xo /njs /njh src\storage\ %OUT_DIR%\data\ f123history.xml
 
 @REM  Hide console: /subsystem:windows /entry:mainCRTStartup
