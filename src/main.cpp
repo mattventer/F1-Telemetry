@@ -213,7 +213,8 @@ void ParsePacket(char *buffer, int n)
         {
             sSessionHistory->StartSession(trackId, sessionType);
         }
-        sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
+        // TODO: fix, always 0
+        // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
         break;
     }
     case EPacketId::SessionHistory:
