@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -18,7 +19,6 @@ using namespace F123;
 namespace
 {
     constexpr int sMaxDataCount = 10000;
-    static float mMaxDelta{0.01f};
 }
 
 class CLapDeltas
@@ -87,6 +87,7 @@ public:
     {
         mDataCount = 0;
         mMaxDelta = 0.01f;
+        mMinDelta = FLT_MAX;
         memset(mXaxis, 0.0f, sizeof(mXaxis));
         memset(mDeltas, 0.0f, sizeof(mDeltas));
     }
@@ -98,7 +99,7 @@ public:
             if (ImPlot::BeginPlot("Delta leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
             {
                 // Configure
-                ImPlot::SetupAxisLimits(ImAxis_Y1, 0, mMaxDelta * 1.5f, ImPlotCond_Always);
+                ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
                 ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
                 ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
                 ImPlot::SetNextLineStyle(red, 3);
@@ -111,7 +112,7 @@ public:
             if (ImPlot::BeginPlot("Delta to car behind", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
             {
                 // Configure
-                ImPlot::SetupAxisLimits(ImAxis_Y1, 0, mMaxDelta * 1.5f, ImPlotCond_Always);
+                ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
                 ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
                 ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
                 ImPlot::SetNextLineStyle(green, 3);
@@ -130,6 +131,9 @@ private:
     float mDeltas[sMaxDataCount]{};
     float mXaxis[sMaxDataCount]{};
     int mDataCount{0};
+
+    float mMaxDelta{0.01f};
+    float mMinDelta{FLT_MAX};
 
     void SetDeltaData(const SLapData &myLapData, const SLapData &carBehindLapData)
     {
@@ -158,7 +162,7 @@ private:
         float currLapTimeSecs = currLapTime / 1000.0f;
 
         // Outlier when car behind gets overtaken
-        if (mDataCount != 0 && deltaSecs > 30 && (deltaSecs > mDeltas[mDataCount - 1] * 10))
+        if (deltaMS == 0.0f || (mDataCount != 0 && deltaSecs > 5.0f && ((deltaSecs > (mDeltas[mDataCount - 1] * 2.5f)))))
         {
             return;
         }
@@ -166,9 +170,14 @@ private:
         mDeltas[mDataCount] = deltaSecs;
         mXaxis[mDataCount] = currLapTimeSecs;
 
+        // Chart Y-axis min/max
         if (deltaSecs > mMaxDelta)
         {
             mMaxDelta = deltaSecs;
+        }
+        if (deltaSecs < mMinDelta)
+        {
+            mMinDelta = deltaSecs;
         }
         mDataCount++;
     }
