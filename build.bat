@@ -1,5 +1,8 @@
 @REM Build for Visual Studio compiler. Run your copy of vcvars32.bat or vcvarsall.bat to setup command-line compiler.
 @REM Important: to build on 32-bit systems, the DX12 backends needs '#define ImTextureID ImU64', so we pass it here.
+
+@REM Run "Developer command prompt for VS 2017", then you can run build.bat
+
 @set OUT_DIR=build
 @set OUT_EXE=f123_telemetry
 @set INCLUDES=/I libs\imgui /I libs\imgui\backends /I libs\implot /I libs\tinyxml2 /I "%WindowsSdkDir%Include\um" /I "%WindowsSdkDir%Include\shared"

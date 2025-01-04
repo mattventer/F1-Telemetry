@@ -106,7 +106,7 @@ void ParsePacket(char *buffer, int n)
     header.get(buffer);
     if (header.packetFormat != 2023)
     {
-        std::cerr << "Incorrect packet format. Expected 2022, received " << header.packetFormat << std::endl;
+        std::cerr << "Incorrect packet format. Expected 2023, received " << header.packetFormat << std::endl;
         return;
     }
 
@@ -202,16 +202,18 @@ void ParsePacket(char *buffer, int n)
     }
     case EPacketId::Session:
     {
+        const auto sessionUid = header.sessionUid;
         sSessionInfo->SessionStarted();
         SPacketSessionData sessionData;
         sessionData.get(buffer);
 
         auto trackId = static_cast<ETrackId>(sessionData.trackId);
         auto sessionType = static_cast<ESessionType>(sessionData.sessionType);
+
         // Banking on this always coming before LapData
         if (!sSessionHistory->SessionActive())
         {
-            sSessionHistory->StartSession(trackId, sessionType);
+            sSessionHistory->StartSession(sessionUid, trackId, sessionType);
         }
         // TODO: fix, always 0
         // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
@@ -295,16 +297,16 @@ int main()
                         DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
                         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
                         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
-
     // Load fonts
     auto defaultFont = io.Fonts->AddFontDefault();
-    auto mainTabsFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 20.0f);
+    auto mainTabsFont = io.Fonts->AddFontDefault(); // io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 20.0f);
 
     // Session history tab fonts
     auto tableHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/TitilliumWeb-Bold.ttf", 30.0f);
     auto raceHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 18.0f);
     auto sessionHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 17.0f);
     auto generalTableFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 16.5f);
+
     sSessionHistory->SetFonts(tableHeaderFont, raceHeaderFont, sessionHeaderFont, generalTableFont);
 
     auto sessionInfoFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 16.0f);
@@ -395,8 +397,8 @@ int main()
             }
             ImGui::EndTabBar();
         }
-        ImGui::PopFont();
 
+        ImGui::PopFont();
         ImGui::PopStyleVar();
         ImGui::End();
 

@@ -19,6 +19,7 @@ namespace SessionStorage
 
     struct SSessionData
     {
+        uint64_t uid{0};
         F123::ESessionType sessionType{F123::ESessionType::Unknown};
         std::vector<SLap> laps;
 
@@ -31,6 +32,7 @@ namespace SessionStorage
     struct SRaceWeekend
     {
         std::string trackName{"Unknown"};
+        std::string date{""};
         std::vector<SSessionData> sessions;
     };
 }

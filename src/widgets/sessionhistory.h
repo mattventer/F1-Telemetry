@@ -23,8 +23,8 @@ namespace
 {
     static ImGuiTableFlags sTableFlags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
 
-    // TODO: Testing only, use GUI to set
-    const std::filesystem::path sStoragePath = "data/f123history.xml";
+    // TODO: Dev only, use GUI to set
+    const std::filesystem::path sStoragePath = "D:\\Projects\\F123_Telemetry\\build\\data\\f123history.xml";
 }
 
 class CSessionHistory
@@ -41,22 +41,29 @@ public:
         {
             mRaces = mStorage.LoadRaceData();
             mRacesLoaded = mRaces.size();
+            const std::string infoStr = mRacesLoaded > 1 ? " races" : " race";
+            std::cout << "Loaded " << mRacesLoaded << infoStr << std::endl;
         }
 
         // // For testing
         // SRaceWeekend dummyRace1;
         // dummyRace1.trackName = "TrackName1";
+        // dummyRace1.date = "dummy date1";
         // SRaceWeekend dummyRace2;
         // dummyRace2.trackName = "TrackName2";
+        // dummyRace2.date = "dummy date2";
 
         // SSessionData practiceSession1;
+        // practiceSession1.uid = 12345;
         // practiceSession1.sessionType = ESessionType::P1;
         // practiceSession1.fastestLapNum = 5;
 
         // SSessionData practiceSession2;
+        // practiceSession2.uid = 67890;
         // practiceSession2.sessionType = ESessionType::P2;
 
         // SSessionData raceSession;
+        // raceSession.uid = 98765;
         // raceSession.sessionType = ESessionType::R;
 
         // for (int i = 1; i < 10; ++i)
@@ -98,36 +105,55 @@ public:
 
     void StoreSessionHistory()
     {
+        // Only want to store new races
         int nRaces = mRaces.size() - mRacesLoaded;
-        if (nRaces > 0)
+
+        if (mRaces.size() > 0)
         {
+            // TODO: Temporary fix for when a race was save partway through
+            if (nRaces + 1 <= mRaces.size())
+            {
+                nRaces++;
+            }
+
+            std::cout << "Storing last " << nRaces << " race(s)" << std::endl;
+
             if (!mStorage.StoreRaceData(mRaces, nRaces))
             {
                 std::cout << "Store failed" << std::endl;
             }
         }
+        else
+        {
+            std::cout << "No new races to store" << std::endl;
+        }
     }
 
     void SetSessionHistoryData(const SPacketSessionHistoryData &mySessionData)
     {
+
         if (mRaces.empty() || mRaces.at(mRaces.size() - 1).sessions.empty())
         {
-            std::cout << "Getting lap data without a race or session available to update" << std::endl;
+            // std::cout << "Getting lap data without a race or session available to update" << std::endl;
             return;
         }
 
-        uint8_t lapNum = mySessionData.numLaps;
-
-        if (lapNum == 0)
+        // Don't care
+        if (mySessionData.numLaps == 0)
         {
             return;
         }
 
         // Find proper race (last in vector)
         auto raceIdx = mRaces.size() - 1; // week
+
+        // TODO: Check the session uid to make sure
         auto sessionIdx = mRaces.at(raceIdx).sessions.size() - 1;
+
+        uint8_t lapNum = mySessionData.numLaps;
         auto currLapIdx = lapNum - 1;
         int lapsStored = mRaces.at(raceIdx).sessions.at(sessionIdx).laps.size();
+
         if (lapNum > lapsStored)
         {
             for (int i = lapsStored; i < lapNum; ++i)
@@ -149,13 +175,19 @@ public:
             }
         }
 
+        // TODO: Figure out why I'm doing this again
         SessionStorage::SLap lap;
         lap.lapNumber = lapNum;
         lap.sector1MS = mySessionData.lapHistoryData[currLapIdx].sector1TimeInMS;
         lap.sector2MS = mySessionData.lapHistoryData[currLapIdx].sector2TimeInMS;
         lap.sector3MS = mySessionData.lapHistoryData[currLapIdx].sector3TimeInMS;
         lap.totalLapTime = mySessionData.lapHistoryData[currLapIdx].lapTimeInMS;
-        mRaces[raceIdx].sessions[sessionIdx].laps[currLapIdx] = lap;
+
+        // Crossing the finish line starts a new "lap", but times are all 0. Ignore this
+        if (lap.sector1MS + lap.sector2MS + lap.sector3MS > 0)
+        {
+            mRaces[raceIdx].sessions[sessionIdx].laps[currLapIdx] = lap;
+        }
 
         // Update fastest times
         mRaces[raceIdx].sessions[sessionIdx].fastestLapNum = mySessionData.bestLapTimeLapNum;
@@ -164,19 +196,22 @@ public:
         mRaces[raceIdx].sessions[sessionIdx].fastestSec3LapNum = mySessionData.bestSector3LapNum;
     }
 
-    void StartSession(const ETrackId trackId, const ESessionType sessionType)
+    void StartSession(const uint64_t uid, const ETrackId trackId, const ESessionType sessionType)
     {
+        std::cout << "Starting session: " << uid << std::endl;
+
         mRecord = true;
         auto trackName = sTrackIdToString.at(trackId);
 
         SessionStorage::SSessionData newSession;
+        newSession.uid = uid;
         newSession.sessionType = sessionType;
         // Continuing previous week (may be practice/qual/race)
         if (!mRaces.empty() && mRaces.at(mRaces.size() - 1).trackName == trackName)
         {
             auto sessions = mRaces.at(mRaces.size() - 1).sessions;
             // Push a new session if one doesn't already exist
-            if (sessions.size() < 1 || sessions.at(sessions.size() - 1).sessionType != sessionType)
+            if (sessions.size() < 1 || sessions.at(sessions.size() - 1).uid != uid)
             {
                 mRaces[mRaces.size() - 1].sessions.push_back(newSession);
             }
@@ -186,6 +221,8 @@ public:
             // New race week, new session
             SessionStorage::SRaceWeekend newWeekend;
             newWeekend.trackName = trackName;
+            time_t now = time(0);
+            newWeekend.date = std::string(ctime(&now));
             newWeekend.sessions.push_back(newSession);
             mRaces.push_back(newWeekend);
         }
@@ -245,9 +282,10 @@ public:
                     flags |= ImGuiTreeNodeFlags_DefaultOpen;
                 }
 
-                // Entire race week (Track name)
+                // Entire race week (Track name + date)
                 ImGui::PushFont(mRaceHeaderFont);
-                bool open = ImGui::TreeNodeEx(race->trackName.c_str(), flags);
+                std::string raceWeekLabel = race->trackName + " " + race->date;
+                bool open = ImGui::TreeNodeEx(raceWeekLabel.c_str(), flags);
                 ImGui::PopFont();
                 if (open)
                 {
@@ -266,7 +304,8 @@ public:
                         }
 
                         ImGui::PushFont(mSessionHeaderFont);
-                        bool open = ImGui::TreeNodeEx(sSessionTypeToString.at(session->sessionType).c_str(), sessionFlags);
+                        const std::string sessionHeaderStr = sSessionTypeToString.at(session->sessionType) + " [" + std::to_string(session->uid) + "]";
+                        bool open = ImGui::TreeNodeEx(sessionHeaderStr.c_str(), sessionFlags);
                         ImGui::PopFont();
                         if (open)
                         {
@@ -321,10 +360,11 @@ public:
             ImGui::EndTable();
             ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - 35);
             if (ImGui::Button("Save"))
+            {
                 clicked++;
+            }
             if (clicked & 1)
             {
-                std::cout << "Save clicked" << std::endl;
                 StoreSessionHistory();
                 clicked = 0;
             }

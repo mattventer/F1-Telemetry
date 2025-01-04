@@ -96,7 +96,7 @@ public:
     {
         if (mCarRacePosition > 1)
         {
-            if (ImPlot::BeginPlot("Delta leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
+            if (ImPlot::BeginPlot("Delta to leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
             {
                 // Configure
                 ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
