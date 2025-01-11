@@ -2,6 +2,7 @@
 
 #include "imgui.h"
 
+#include "spdlog/spdlog.h"
 #include "../widgets/cardamage.h"
 #include "../widgets/lapdeltas.h"
 #include "../widgets/lapinfoheader.h"
@@ -22,6 +23,7 @@ public:
                const std::shared_ptr<CLapInfoHeader> &lapInfoHeader)
         : mTyreWearGraph(tyreWearGraph), mCarDamageGraph(carDamageGraph), mTyreTemps(tyreTemps), mLapDeltas(lapDeltas), mLapInfoHeader(lapInfoHeader)
     {
+        SPDLOG_TRACE("CDashboard()");
     }
     void ShowWindow(const ImVec2 spaceAvail)
     {

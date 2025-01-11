@@ -5,7 +5,7 @@
 
 @set OUT_DIR=build
 @set OUT_EXE=f123_telemetry
-@set INCLUDES=/I libs\imgui /I libs\imgui\backends /I libs\implot /I libs\tinyxml2 /I "%WindowsSdkDir%Include\um" /I "%WindowsSdkDir%Include\shared"
+@set INCLUDES=/I include /I include\f1 /I libs\spdlog\include /I libs\imgui /I libs\imgui\backends /I libs\implot /I libs\tinyxml2 /I "%WindowsSdkDir%Include\um" /I "%WindowsSdkDir%Include\shared"
 @set SOURCES=src\main.cpp libs\imgui\backends\imgui_impl_dx12.cpp libs\imgui\backends\imgui_impl_win32.cpp libs\imgui\imgui*.cpp libs\implot\implot*.cpp libs\tinyxml2\tinyxml2*.cpp
 @set LIBS=d3d12.lib d3dcompiler.lib dxgi.lib
 mkdir build

@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "imgui.h"
 #include "implot.h"
+#include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
@@ -12,6 +13,8 @@ class CTyreWearGraph
 public:
     CTyreWearGraph()
     {
+        SPDLOG_TRACE("CTyreWearGraph()");
+
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;

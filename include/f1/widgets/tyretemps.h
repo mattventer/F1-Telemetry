@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "f123constants.h"
 #include "packets/session.h"
+#include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
@@ -15,6 +16,7 @@ class CTyreTemps
 public:
     CTyreTemps()
     {
+        SPDLOG_TRACE("CTyreTemps()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;

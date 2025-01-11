@@ -5,6 +5,7 @@
 
 #include "constants.h"
 #include "packets/cardamage.h"
+#include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
@@ -14,6 +15,7 @@ class CCarDamageGraph
 public:
     CCarDamageGraph()
     {
+        SPDLOG_TRACE("CCarDamageGraph()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;

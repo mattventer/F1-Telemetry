@@ -5,6 +5,7 @@
 
 #include "constants.h"
 #include "packets/session.h"
+#include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
@@ -22,6 +23,7 @@ class CSessionInfo
 public:
     CSessionInfo()
     {
+        SPDLOG_TRACE("CSessionInfo()");
     }
 
     void SetFont(ImFont *font)

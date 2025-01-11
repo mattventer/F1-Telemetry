@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "f123constants.h"
 #include "packets/lapdata.h"
+#include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
@@ -26,6 +27,8 @@ class CLapDeltas
 public:
     CLapDeltas()
     {
+        SPDLOG_TRACE("CLapDeltas()");
+
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_AutoFit;
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;

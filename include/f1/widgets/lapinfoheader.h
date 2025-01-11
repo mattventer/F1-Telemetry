@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include "imgui.h"
+#include "spdlog/spdlog.h"
 
 #include <cstdint>
 #include <iostream>
@@ -13,6 +14,7 @@ class CLapInfoHeader
 public:
     CLapInfoHeader()
     {
+        SPDLOG_TRACE("CLapInfoHeader()");
     }
 
     void SetPitLapWindow(const uint8_t min, const uint8_t max, const uint8_t rejoinPos)

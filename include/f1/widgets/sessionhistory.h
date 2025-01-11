@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "f123constants.h"
 #include "packets/sessionhistory.h"
+#include "spdlog/spdlog.h"
 #include "storage/data.h"
 #include "storage/sessionstorage.h"
 
@@ -32,6 +33,7 @@ class CSessionHistory
 public:
     CSessionHistory()
     {
+        SPDLOG_TRACE("CSessionHistory()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_AutoFit;
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
@@ -42,7 +44,7 @@ public:
             mRaces = mStorage.LoadRaceData();
             mRacesLoaded = mRaces.size();
             const std::string infoStr = mRacesLoaded > 1 ? " races" : " race";
-            std::cout << "Loaded " << mRacesLoaded << infoStr << std::endl;
+            SPDLOG_DEBUG("Loaded {} races", mRacesLoaded);
         }
 
         // // For testing
@@ -116,16 +118,16 @@ public:
                 nRaces++;
             }
 
-            std::cout << "Storing last " << nRaces << " race(s)" << std::endl;
+            SPDLOG_DEBUG("Storing last {} race(s)", nRaces);
 
             if (!mStorage.StoreRaceData(mRaces, nRaces))
             {
-                std::cout << "Store failed" << std::endl;
+                SPDLOG_ERROR("Store failed!");
             }
         }
         else
         {
-            std::cout << "No new races to store" << std::endl;
+            SPDLOG_DEBUG("No new races to store");
         }
     }
 
@@ -134,7 +136,7 @@ public:
 
         if (mRaces.empty() || mRaces.at(mRaces.size() - 1).sessions.empty())
         {
-            // std::cout << "Getting lap data without a race or session available to update" << std::endl;
+            SPDLOG_WARN("Getting lap data without a race or session available to update");
             return;
         }
 
@@ -198,7 +200,7 @@ public:
 
     void StartSession(const uint64_t uid, const ETrackId trackId, const ESessionType sessionType)
     {
-        std::cout << "Starting session: " << uid << std::endl;
+        SPDLOG_INFO("Starting session: {}", uid);
 
         mRecord = true;
         auto trackName = sTrackIdToString.at(trackId);

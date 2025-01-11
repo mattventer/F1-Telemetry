@@ -1,3 +1,4 @@
+#include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <ctime>
@@ -30,31 +31,54 @@
 #include "implot.h"
 #include "backends/imgui_impl_dx12.h"
 #include "backends/imgui_impl_win32.h"
+
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <tchar.h>
 
+#define CONSOLE_LOG
 #define ImTextureID ImU64
 
 using namespace F123;
 
-const int sUdpPort = 20777;
+namespace
+{
+    const auto sLogFile = "logs/log.txt";
+    const auto sLogGlobalLevel = spdlog::level::trace;
+    const auto sLogConsoleLevel = spdlog::level::info;
+    const auto sLogFileLevel = spdlog::level::trace;
+    const auto sFlushLevel = spdlog::level::trace;
+    const int sUdpPort = 20777;
+}
 
 // Components
 std::unique_ptr<CUdpClient> client;
 std::thread listener;
 
-// Graphs
-const auto sSessionInfo = std::make_shared<CSessionInfo>();
-const auto sSessionHistory = std::make_shared<CSessionHistory>();
-const auto sTyreTemps = std::make_shared<CTyreTemps>();
-const auto sTyreWearGraph = std::make_shared<CTyreWearGraph>();
-const auto sCarDamageGraph = std::make_shared<CCarDamageGraph>();
-const auto sLapDeltas = std::make_shared<CLapDeltas>();
-const auto sLapInfoHeader = std::make_shared<CLapInfoHeader>();
+// // Graphs
+// const auto sSessionInfo = std::make_shared<CSessionInfo>();
+// const auto sSessionHistory = std::make_shared<CSessionHistory>();
+// const auto sTyreTemps = std::make_shared<CTyreTemps>();
+// const auto sTyreWearGraph = std::make_shared<CTyreWearGraph>();
+// const auto sCarDamageGraph = std::make_shared<CCarDamageGraph>();
+// const auto sLapDeltas = std::make_shared<CLapDeltas>();
+// const auto sLapInfoHeader = std::make_shared<CLapInfoHeader>();
+
+std::shared_ptr<CSessionInfo> sSessionInfo;
+std::shared_ptr<CSessionHistory> sSessionHistory;
+std::shared_ptr<CTyreTemps> sTyreTemps;
+std::shared_ptr<CTyreWearGraph> sTyreWearGraph;
+std::shared_ptr<CCarDamageGraph> sCarDamageGraph;
+std::shared_ptr<CLapDeltas> sLapDeltas;
+std::shared_ptr<CLapInfoHeader> sLapInfoHeader;
 
 // Windows
-const auto sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
+std::shared_ptr<CDashboard> sDashboard;
+// const auto sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
 
 struct FrameContext
 {
@@ -256,6 +280,41 @@ void ParsePacket(char *buffer, int n)
 
 int main()
 {
+    // Logging setup
+    std::vector<spdlog::sink_ptr> sinks;
+
+#ifdef CONSOLE_LOG
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level(sLogConsoleLevel);
+    console_sink->set_pattern("[%^%l%$] %v");
+    sinks.push_back(console_sink);
+#endif
+
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(sLogFile, true);
+    file_sink->set_level(sLogFileLevel);
+    file_sink->set_pattern("%T [%^%8l%$] %-18s %v"); // Log level and file text alignment
+    sinks.push_back(file_sink);
+
+    auto logger = std::make_shared<spdlog::logger>("F1", begin(sinks), end(sinks));
+    logger->flush_on(sFlushLevel);
+
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(sLogGlobalLevel);
+
+    SPDLOG_INFO("Starting F1 Telemetry");
+
+    // Initialize graphs
+    sSessionInfo = std::make_shared<CSessionInfo>();
+    sSessionHistory = std::make_shared<CSessionHistory>();
+    sTyreTemps = std::make_shared<CTyreTemps>();
+    sTyreWearGraph = std::make_shared<CTyreWearGraph>();
+    sCarDamageGraph = std::make_shared<CCarDamageGraph>();
+    sLapDeltas = std::make_shared<CLapDeltas>();
+    sLapInfoHeader = std::make_shared<CLapInfoHeader>();
+
+    // Initialize dashboard window
+    sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
+
     // Signal handler
     signal(SIGINT, signal_callback_handler);
     client = std::make_unique<CUdpClient>(sUdpPort);
@@ -299,7 +358,7 @@ int main()
                         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
     // Load fonts
     auto defaultFont = io.Fonts->AddFontDefault();
-    auto mainTabsFont = io.Fonts->AddFontDefault(); // io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 20.0f);
+    auto mainTabsFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 20.0f);
 
     // Session history tab fonts
     auto tableHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/TitilliumWeb-Bold.ttf", 30.0f);
@@ -439,6 +498,8 @@ int main()
         g_fenceLastSignaledValue = fenceValue;
         frameCtx->FenceValue = fenceValue;
     }
+
+    SPDLOG_INFO("Exit");
 
     client->stop();
     listener.join();
