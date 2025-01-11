@@ -8,6 +8,5 @@ Run f1dev.bat
 
 
 TODO:
-	1. Logging (write to file, stop using stdout for everything smh)
-	2. Put the code in .cpp files, come on man
-	3. Figure out why opening any race that is not in the .xml causes a crash
+	1. Put the code in .cpp files, come on man
+	2. Figure out why opening any race that is not in the .xml causes a crash
