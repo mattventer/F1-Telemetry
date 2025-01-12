@@ -1,6 +1,7 @@
 #pragma once
 
 #include "data.h"
+#include "spdlog/spdlog.h"
 #include "tinyxml2.h"
 
 #include <cstdint>
@@ -37,6 +38,7 @@ class CSessionStorage
 public:
     CSessionStorage()
     {
+        SPDLOG_TRACE("CSessionStorage");
     }
 
     bool SetStoragePath(const std::filesystem::path &filePath)
@@ -44,14 +46,18 @@ public:
         if (!std::filesystem::exists(filePath))
         {
             std::cout << "Storage does not exist. Creating..." << std::endl;
+            SPDLOG_DEBUG("Storage does not exist. Creating...");
+
             if (!CreateStorage(filePath))
             {
-                std::cout << "Failed to create race history storage" << std::endl;
+                SPDLOG_DEBUG("Failed to create race history storage");
                 return false;
             }
         }
 
         mPath = filePath;
+        SPDLOG_DEBUG("Storage path: {}", mPath.string());
+
         return true;
     }
 
@@ -61,14 +67,14 @@ public:
         std::vector<SessionStorage::SRaceWeekend> races;
         if (mPath.string().empty())
         {
-            std::cout << "No storage path specified." << std::endl;
+            SPDLOG_DEBUG("No storage path specified.");
             return races;
         }
 
         tinyxml2::XMLDocument doc;
         if (doc.LoadFile(mPath.string().c_str()) != 0)
         {
-            std::cout << "Failed to read race history from " << mPath.string() << std::endl;
+            SPDLOG_DEBUG("Failed to read race history from {}", mPath.string());
             return races;
         }
 
@@ -155,16 +161,17 @@ public:
         return races;
     }
 
+    // TODO: Return how many races were stored
     bool StoreRaceData(std::vector<SessionStorage::SRaceWeekend> races, int count)
     {
         if (mPath.string().empty())
         {
-            std::cout << "No storage path specified" << std::endl;
+            SPDLOG_DEBUG("No storage path specified");
             return false;
         }
         if (count <= 0)
         {
-            std::cout << "No new races" << std::endl;
+            SPDLOG_DEBUG("No new races to store");
             return true;
         }
 
@@ -174,33 +181,41 @@ public:
         auto root = doc.FirstChildElement(sRootNodeKey);
         if (!root)
         {
-            std::cout << "Storage is not formatted properly" << std::endl;
+            SPDLOG_DEBUG("Storage is not formatted properly!");
             return false;
         }
 
-        std::cout << "Storing " << count << " race(s)" << std::endl;
+        SPDLOG_DEBUG("Storing {} races. Total in memory: {}", count, races.size());
 
         int startIdx = races.size() - count;
+        SPDLOG_DEBUG("startIdx {}", startIdx);
+
         for (int i = startIdx; i < races.size(); ++i)
         {
-            int firstSessionToStore = startIdx; // Some sessions might be stored already
+            int firstSessionToStore = 0; // Some sessions might be stored already
+            bool sessionExists = false;
+            // Loop through sessions in memory
             for (auto session : races[i].sessions)
             {
-                bool sessionExists = false;
+                sessionExists = false;
                 auto sessionUid = std::to_string(session.uid);
 
                 // Check if track already exists in storage (could have the same name as another, need to compare session uids)
                 for (auto raceWkd = root->FirstChildElement(sRaceWeekendNodeKey); raceWkd != nullptr; raceWkd = raceWkd->NextSiblingElement())
                 {
                     auto trackNameAttr = raceWkd->Attribute(sRaceWeekendTrackKey);
+
+                    SPDLOG_DEBUG("Checking if trackname {} has uid {}", trackNameAttr, sessionUid);
+
                     if (trackNameAttr && std::string(trackNameAttr) == races[i].trackName)
                     {
                         // Check if session uid exists in this race weekend
                         for (auto session = raceWkd->FirstChildElement(sSessionNodeKey); session != nullptr; session = session->NextSiblingElement())
                         {
-                            auto sessionUidAttr = session->Attribute(sSessionUidKey);
-                            if (sessionUidAttr && std::string(sessionUidAttr) == sessionUid)
+                            auto storedSessionUidAttr = session->Attribute(sSessionUidKey);
+                            if (storedSessionUidAttr && std::string(storedSessionUidAttr) == sessionUid)
                             {
+                                SPDLOG_DEBUG("Found matching session on track {} {}/{} (new/stored)", trackNameAttr, sessionUid, std::string(storedSessionUidAttr));
                                 firstSessionToStore++;
                                 sessionExists = true;
                                 break;
@@ -216,17 +231,20 @@ public:
                 }
             }
 
-            if (firstSessionToStore >= races[i].sessions.size() - 1)
+            if (firstSessionToStore >= races[i].sessions.size())
             {
-                std::cout << "All sessions within " << races[i].trackName << " already exist in storage" << std::endl;
+                SPDLOG_DEBUG("All sessions within {} already exist in storage", races[i].trackName);
                 continue;
             }
 
-            std::cout << "New race weekend with trackname " << races[i].trackName << std::endl;
+            SPDLOG_DEBUG("New race weekend on track {}", races[i].trackName);
+
             // New race weekend
             auto raceNode = doc.NewElement(sRaceWeekendNodeKey);
             raceNode->SetAttribute(sRaceWeekendTrackKey, races[i].trackName.c_str());
             raceNode->SetAttribute(sRaceWeekendDateKey, races[i].date.c_str());
+
+            SPDLOG_DEBUG("First session to store idx: {} / uid {}", firstSessionToStore, races[i].sessions[firstSessionToStore].uid);
 
             // Race sessions to be stored
             for (int j = firstSessionToStore; j < races[i].sessions.size(); ++j)
@@ -304,7 +322,7 @@ private:
         }
         catch (const std::exception &e)
         {
-            std::cout << "Error when creating storage at " << filePath.string() << ": " << e.what() << std::endl;
+            SPDLOG_ERROR("Error when creating storage at {}: {}", filePath.string(), e.what());
             return false;
         }
     }

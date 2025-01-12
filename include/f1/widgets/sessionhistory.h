@@ -15,6 +15,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace F123;
@@ -23,6 +24,10 @@ using namespace SessionStorage;
 namespace
 {
     static ImGuiTableFlags sTableFlags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+
+    // Graphing conversions
+    const auto sMsPerSec = 1000.0f;
+    const auto sSecPerMin = 60;
 
     // TODO: Dev only, use GUI to set
     const std::filesystem::path sStoragePath = "D:\\Projects\\F123_Telemetry\\build\\data\\f123history.xml";
@@ -107,6 +112,8 @@ public:
 
     void StoreSessionHistory()
     {
+        SPDLOG_TRACE("StoreSessionHistory() entry");
+
         // Only want to store new races
         int nRaces = mRaces.size() - mRacesLoaded;
 
@@ -133,31 +140,37 @@ public:
 
     void SetSessionHistoryData(const SPacketSessionHistoryData &mySessionData)
     {
-
-        if (mRaces.empty() || mRaces.at(mRaces.size() - 1).sessions.empty())
-        {
-            SPDLOG_WARN("Getting lap data without a race or session available to update");
-            return;
-        }
-
+        SPDLOG_TRACE("SetSessionHistoryData() entry");
         // Don't care
-        if (mySessionData.numLaps == 0)
+        if ((mySessionData.numLaps == 0) || (mySessionData.header.sessionUid == 0))
         {
             return;
         }
 
-        // Find proper race (last in vector)
-        auto raceIdx = mRaces.size() - 1; // week
+        // Find proper race week
+        std::tuple<int, int> location = FindSession(mySessionData.header.sessionUid);
+        auto raceIdx = std::get<0>(location);
+        auto sessionIdx = std::get<1>(location);
+        SPDLOG_TRACE("New session data: raceIdx {}, sessionIdx {}", raceIdx, sessionIdx);
 
-        // TODO: Check the session uid to make sure
-        auto sessionIdx = mRaces.at(raceIdx).sessions.size() - 1;
+        // Session doesn't exist, create a new one
+        if (sessionIdx < 0)
+        {
+            SPDLOG_ERROR("Session UID {} doesn't exist but got SPacketSessionHistoryData for it", mySessionData.header.sessionUid);
+            return;
+        }
 
-        uint8_t lapNum = mySessionData.numLaps;
-        auto currLapIdx = lapNum - 1;
-        int lapsStored = mRaces.at(raceIdx).sessions.at(sessionIdx).laps.size();
+        uint8_t lapNum = mySessionData.numLaps;                                  // Incoming lap info
+        auto currLapIdx = lapNum - 1;                                            // Index this lap relates to
+        int lapsStored = mRaces.at(raceIdx).sessions.at(sessionIdx).laps.size(); // How many laps have we stored already?
+        SPDLOG_TRACE("Got lap #{}. Last lap received #{}", lapNum, lapsStored);
 
+        // Need to add a new lap
         if (lapNum > lapsStored)
         {
+            SPDLOG_TRACE("{} {} new laps to store", mRaces.at(raceIdx).trackName, (lapNum - lapsStored));
+
+            // Store all new laps
             for (int i = lapsStored; i < lapNum; ++i)
             {
                 SessionStorage::SLap lap;
@@ -166,61 +179,83 @@ public:
                 lap.sector2MS = mySessionData.lapHistoryData[i].sector2TimeInMS;
                 lap.sector3MS = mySessionData.lapHistoryData[i].sector3TimeInMS;
                 lap.totalLapTime = mySessionData.lapHistoryData[i].lapTimeInMS;
-                mRaces.at(raceIdx).sessions.at(sessionIdx).laps.push_back(lap);
+
+                if ((lap.sector1MS + lap.sector1MS + lap.sector1MS) > 0)
+                {
+                    mRaces.at(raceIdx).sessions.at(sessionIdx).laps.push_back(lap);
+                    SPDLOG_TRACE("Pushed new lap {} on track {}", lap.lapNumber, mRaces.at(raceIdx).trackName);
+                }
 
                 // Sector 3 + Total lap time for last lap
                 if (i > 0 && lapNum == lapsStored + 1)
                 {
-                    mRaces.at(raceIdx).sessions.at(sessionIdx).laps[i - 1].sector3MS = mySessionData.lapHistoryData[i - 1].sector3TimeInMS;
-                    mRaces.at(raceIdx).sessions.at(sessionIdx).laps[i - 1].totalLapTime = mySessionData.lapHistoryData[i - 1].lapTimeInMS;
+                    SPDLOG_TRACE("Sector 3 + Total lap time for last lap");
+                    mRaces.at(raceIdx).sessions.at(sessionIdx).laps.at(i - 1).sector3MS = mySessionData.lapHistoryData[i - 1].sector3TimeInMS;
+                    mRaces.at(raceIdx).sessions.at(sessionIdx).laps.at(i - 1).totalLapTime = mySessionData.lapHistoryData[i - 1].lapTimeInMS;
                 }
             }
         }
-
-        // TODO: Figure out why I'm doing this again
-        SessionStorage::SLap lap;
-        lap.lapNumber = lapNum;
-        lap.sector1MS = mySessionData.lapHistoryData[currLapIdx].sector1TimeInMS;
-        lap.sector2MS = mySessionData.lapHistoryData[currLapIdx].sector2TimeInMS;
-        lap.sector3MS = mySessionData.lapHistoryData[currLapIdx].sector3TimeInMS;
-        lap.totalLapTime = mySessionData.lapHistoryData[currLapIdx].lapTimeInMS;
-
-        // Crossing the finish line starts a new "lap", but times are all 0. Ignore this
-        if (lap.sector1MS + lap.sector2MS + lap.sector3MS > 0)
+        // Updated times for current lap
+        else
         {
-            mRaces[raceIdx].sessions[sessionIdx].laps[currLapIdx] = lap;
+            SessionStorage::SLap lap;
+            lap.lapNumber = lapNum;
+            lap.sector1MS = mySessionData.lapHistoryData[currLapIdx].sector1TimeInMS;
+            lap.sector2MS = mySessionData.lapHistoryData[currLapIdx].sector2TimeInMS;
+            lap.sector3MS = mySessionData.lapHistoryData[currLapIdx].sector3TimeInMS;
+            lap.totalLapTime = mySessionData.lapHistoryData[currLapIdx].lapTimeInMS;
+
+            // Crossing the finish line starts a new "lap", but times are all 0. Ignore this
+            if (lap.sector1MS + lap.sector2MS + lap.sector3MS > 0)
+            {
+                mRaces[raceIdx].sessions[sessionIdx].laps[currLapIdx] = lap;
+            }
+            else
+            {
+                // TODO: remove
+                SPDLOG_TRACE("Lap #{} data but all 0's", lapNum);
+            }
         }
 
         // Update fastest times
-        mRaces[raceIdx].sessions[sessionIdx].fastestLapNum = mySessionData.bestLapTimeLapNum;
-        mRaces[raceIdx].sessions[sessionIdx].fastestSec1LapNum = mySessionData.bestSector1LapNum;
-        mRaces[raceIdx].sessions[sessionIdx].fastestSec2LapNum = mySessionData.bestSector2LapNum;
-        mRaces[raceIdx].sessions[sessionIdx].fastestSec3LapNum = mySessionData.bestSector3LapNum;
+        mRaces.at(raceIdx).sessions.at(sessionIdx).fastestLapNum = mySessionData.bestLapTimeLapNum;
+        mRaces.at(raceIdx).sessions.at(sessionIdx).fastestSec1LapNum = mySessionData.bestSector1LapNum;
+        mRaces.at(raceIdx).sessions.at(sessionIdx).fastestSec2LapNum = mySessionData.bestSector2LapNum;
+        mRaces.at(raceIdx).sessions.at(sessionIdx).fastestSec3LapNum = mySessionData.bestSector3LapNum;
     }
 
     void StartSession(const uint64_t uid, const ETrackId trackId, const ESessionType sessionType)
     {
         SPDLOG_INFO("Starting session: {}", uid);
 
+        if (sSessionTypeToString.find(sessionType) == sSessionTypeToString.end())
+        {
+            SPDLOG_WARN("Could not find session type {}", (uint8_t)sessionType);
+        }
+
         mRecord = true;
         auto trackName = sTrackIdToString.at(trackId);
+
+        SPDLOG_TRACE("Track {}", trackName);
 
         SessionStorage::SSessionData newSession;
         newSession.uid = uid;
         newSession.sessionType = sessionType;
-        // Continuing previous week (may be practice/qual/race)
-        if (!mRaces.empty() && mRaces.at(mRaces.size() - 1).trackName == trackName)
+
+        // Find proper race week, if exists
+        std::tuple<int, int> location = FindSession(uid);
+        auto raceIdx = std::get<0>(location);
+        auto sessionIdx = std::get<1>(location);
+
+        // Already have this session, don't create a new one
+        if (sessionIdx > -1)
         {
-            auto sessions = mRaces.at(mRaces.size() - 1).sessions;
-            // Push a new session if one doesn't already exist
-            if (sessions.size() < 1 || sessions.at(sessions.size() - 1).uid != uid)
-            {
-                mRaces[mRaces.size() - 1].sessions.push_back(newSession);
-            }
+            return;
         }
         else
         {
             // New race week, new session
+            SPDLOG_DEBUG("Creating new race weekend");
             SessionStorage::SRaceWeekend newWeekend;
             newWeekend.trackName = trackName;
             time_t now = time(0);
@@ -287,6 +322,7 @@ public:
                 // Entire race week (Track name + date)
                 ImGui::PushFont(mRaceHeaderFont);
                 std::string raceWeekLabel = race->trackName + " " + race->date;
+
                 bool open = ImGui::TreeNodeEx(raceWeekLabel.c_str(), flags);
                 ImGui::PopFont();
                 if (open)
@@ -306,7 +342,20 @@ public:
                         }
 
                         ImGui::PushFont(mSessionHeaderFont);
-                        const std::string sessionHeaderStr = sSessionTypeToString.at(session->sessionType) + " [" + std::to_string(session->uid) + "]";
+
+                        // TODO: Getting session type 15 which does not exist? Maybe when race is quit then resumed?
+                        std::string sessionTypeStr;
+                        if (sSessionTypeToString.find(session->sessionType) == sSessionTypeToString.end())
+                        {
+                            sessionTypeStr = std::to_string((uint8_t)session->sessionType);
+                        }
+                        else
+                        {
+                            sessionTypeStr = sSessionTypeToString.at(session->sessionType);
+                        }
+
+                        const std::string sessionHeaderStr = sessionTypeStr + " [" + std::to_string(session->uid) + "]";
+
                         bool open = ImGui::TreeNodeEx(sessionHeaderStr.c_str(), sessionFlags);
                         ImGui::PopFont();
                         if (open)
@@ -325,30 +374,30 @@ public:
                                 {
                                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
                                 }
-                                ImGui::Text("%.3f", lap->sector1MS / 1000.0f);
+                                ImGui::Text("%.3f", lap->sector1MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec2LapNum)
                                 {
                                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
                                 }
-                                ImGui::Text("%.3f", lap->sector2MS / 1000.0f);
+                                ImGui::Text("%.3f", lap->sector2MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec3LapNum)
                                 {
                                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
                                 }
-                                ImGui::Text("%.3f", lap->sector3MS / 1000.0f);
+                                ImGui::Text("%.3f", lap->sector3MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestLapNum)
                                 {
                                     ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
                                 }
-                                auto seconds = lap->totalLapTime / 1000.0f;
-                                int min = seconds / 60;
-                                ImGui::Text("%d:%06.3f", min, seconds - (min * 60));
+                                auto seconds = lap->totalLapTime / sMsPerSec;
+                                int min = seconds / sSecPerMin;
+                                ImGui::Text("%d:%06.3f", min, seconds - (min * sSecPerMin));
                                 ImGui::PopFont();
                             }
                             ImGui::TreePop();
@@ -393,4 +442,27 @@ private:
     ImFont *mRaceHeaderFont;
     ImFont *mSessionHeaderFont;
     ImFont *mGeneralTableFont;
+
+    // Return race idx and session idx if session uid exists
+    std::tuple<int, int> FindSession(const uint64_t uid)
+    {
+        int raceIdx = 0, sessionIdx = 0;
+
+        // Search race weekends
+        for (auto race : mRaces)
+        {
+            // Search sessions
+            for (auto session : race.sessions)
+            {
+                if (session.uid == uid)
+                {
+                    return std::tuple(raceIdx, sessionIdx);
+                }
+                sessionIdx++;
+            }
+            raceIdx++;
+        }
+
+        return std::tuple(-1, -1); // Does not exist
+    }
 };

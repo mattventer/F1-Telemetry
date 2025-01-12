@@ -59,15 +59,7 @@ namespace
 std::unique_ptr<CUdpClient> client;
 std::thread listener;
 
-// // Graphs
-// const auto sSessionInfo = std::make_shared<CSessionInfo>();
-// const auto sSessionHistory = std::make_shared<CSessionHistory>();
-// const auto sTyreTemps = std::make_shared<CTyreTemps>();
-// const auto sTyreWearGraph = std::make_shared<CTyreWearGraph>();
-// const auto sCarDamageGraph = std::make_shared<CCarDamageGraph>();
-// const auto sLapDeltas = std::make_shared<CLapDeltas>();
-// const auto sLapInfoHeader = std::make_shared<CLapInfoHeader>();
-
+// Graphs
 std::shared_ptr<CSessionInfo> sSessionInfo;
 std::shared_ptr<CSessionHistory> sSessionHistory;
 std::shared_ptr<CTyreTemps> sTyreTemps;
@@ -78,7 +70,6 @@ std::shared_ptr<CLapInfoHeader> sLapInfoHeader;
 
 // Windows
 std::shared_ptr<CDashboard> sDashboard;
-// const auto sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
 
 struct FrameContext
 {
@@ -248,6 +239,7 @@ void ParsePacket(char *buffer, int n)
         SPacketSessionHistoryData sessionHistory;
         sessionHistory.get(buffer);
 
+        // Only care about the player data
         if (sessionHistory.carIdx == playerIdx)
         {
             sSessionHistory->SetSessionHistoryData(sessionHistory);

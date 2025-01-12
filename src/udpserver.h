@@ -35,11 +35,6 @@ public:
             return;
         }
 
-        /* For rebooting the server faster
-        int optval = 1;
-        setsockopt(mSockFd, SOL_SOCKET, SO_REUSEADDR, (const char *)&optval, sizeof(int));
-        */
-
         // Configure listening on port and interfaces (all)
         struct sockaddr_in recvAddr;
         recvAddr.sin_family = AF_INET;
