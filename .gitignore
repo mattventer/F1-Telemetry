@@ -1,9 +1,10 @@
-src/build
+build/
 storage_testing/
 
 *.ini
 *.pdb
 *.vscode
+
 # Prerequisites
 *.d
 
@@ -36,3 +37,7 @@ storage_testing/
 *.exe
 *.out
 *.app
+
+# Custom
+*.txt
+*- Shortcut.lnk

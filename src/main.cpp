@@ -1,3 +1,4 @@
+#include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <ctime>
@@ -7,7 +8,7 @@
 #include <winsock2.h>
 #include <windows.h>
 
-#include "f122constants.h"
+#include "f123constants.h"
 #include "packets/cardamage.h"
 #include "packets/carsetup.h"
 #include "packets/carstatus.h"
@@ -19,40 +20,56 @@
 #include "packets/session.h"
 #include "udpserver.h"
 #include "windows/dashboard.h"
-#include "../widgets/cardamage.h"
-#include "../widgets/lapdata.h"
-#include "../widgets/sessionhistory.h"
-#include "../widgets/sessioninfo.h"
-#include "../widgets/tyrewear.h"
+#include "widgets/cardamage.h"
+#include "widgets/lapdeltas.h"
+#include "widgets/lapinfoheader.h"
+#include "widgets/sessionhistory.h"
+#include "widgets/sessioninfo.h"
+#include "widgets/tyrewear.h"
 
 #include "imgui.h"
 #include "implot.h"
 #include "backends/imgui_impl_dx12.h"
 #include "backends/imgui_impl_win32.h"
+
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG // TODO: This doesn't work, needed to modify in spdlog's common.h line 240
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <tchar.h>
 
+#define CONSOLE_LOG
 #define ImTextureID ImU64
 
-using namespace F122;
+using namespace F123;
 
-const int sUdpPort = 20777;
+namespace
+{
+    const auto sLogFile = "logs/log.txt";
+    const auto sLogGlobalLevel = spdlog::level::trace;
+    const auto sLogConsoleLevel = spdlog::level::info;
+    const auto sLogFileLevel = spdlog::level::trace;
+    const auto sFlushLevel = spdlog::level::trace;
+    const int sUdpPort = 20777;
+}
 
 // Components
 std::unique_ptr<CUdpClient> client;
 std::thread listener;
 
 // Graphs
-const auto sSessionInfo = std::make_shared<CSessionInfo>();
-const auto sSessionHistory = std::make_shared<CSessionHistory>();
-const auto sTyreTemps = std::make_shared<CTyreTemps>();
-const auto sTyreWearGraph = std::make_shared<CTyreWearGraph>();
-const auto sCarDamageGraph = std::make_shared<CCarDamageGraph>();
-const auto sLapData = std::make_shared<CLapData>();
+std::shared_ptr<CSessionInfo> sSessionInfo;
+std::shared_ptr<CSessionHistory> sSessionHistory;
+std::shared_ptr<CTyreTemps> sTyreTemps;
+std::shared_ptr<CTyreWearGraph> sTyreWearGraph;
+std::shared_ptr<CCarDamageGraph> sCarDamageGraph;
+std::shared_ptr<CLapDeltas> sLapDeltas;
+std::shared_ptr<CLapInfoHeader> sLapInfoHeader;
 
 // Windows
-const auto sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapData);
+std::shared_ptr<CDashboard> sDashboard;
 
 struct FrameContext
 {
@@ -104,7 +121,7 @@ void ParsePacket(char *buffer, int n)
     header.get(buffer);
     if (header.packetFormat != 2023)
     {
-        std::cerr << "Incorrect packet format. Expected 2022, received " << header.packetFormat << std::endl;
+        std::cerr << "Incorrect packet format. Expected 2023, received " << header.packetFormat << std::endl;
         return;
     }
 
@@ -180,32 +197,45 @@ void ParsePacket(char *buffer, int n)
         SPacketLapData lapData;
         lapData.get(buffer);
         const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
-        SLapData carBehind;
-        for (int i = 0; i < 22; ++i)
+        SLapData carBehindLapData = {0};
+
+        // Make sure we are in a race
+        if (myRacePosition < 21)
         {
-            if (lapData.lapData[i].carPosition == myRacePosition + 1)
+            for (int i = 0; i < 22; ++i)
             {
-                carBehind = lapData.lapData[i];
-                break;
+                // Car behind lap data
+                if (lapData.lapData[i].carPosition == myRacePosition + 1)
+                {
+                    carBehindLapData = lapData.lapData[i];
+                    break;
+                }
             }
         }
+
         sSessionInfo->SessionStarted();
-        sLapData->SetLapData(lapData.lapData[playerIdx], carBehind);
+        sLapDeltas->SetLapData(lapData.lapData[playerIdx], carBehindLapData);
+        sLapInfoHeader->SetCurrentLap(lapData.lapData[playerIdx].currentLapNum);
         break;
     }
     case EPacketId::Session:
     {
-        sSessionInfo->SessionStarted();
+        const auto sessionUid = header.sessionUid;
+        // sSessionInfo->SessionStarted(); // Handled in events
         SPacketSessionData sessionData;
         sessionData.get(buffer);
 
         auto trackId = static_cast<ETrackId>(sessionData.trackId);
         auto sessionType = static_cast<ESessionType>(sessionData.sessionType);
+
         // Banking on this always coming before LapData
         if (!sSessionHistory->SessionActive())
         {
-            sSessionHistory->StartSession(trackId, sessionType);
+            sSessionHistory->StartSession(sessionUid, trackId, sessionType);
         }
+        // // TODO: fix, always 0
+        // SPDLOG_INFO("Pit: {}-{} rejoin: {}", sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
+        // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
         break;
     }
     case EPacketId::SessionHistory:
@@ -213,6 +243,7 @@ void ParsePacket(char *buffer, int n)
         SPacketSessionHistoryData sessionHistory;
         sessionHistory.get(buffer);
 
+        // Only care about the player data
         if (sessionHistory.carIdx == playerIdx)
         {
             sSessionHistory->SetSessionHistoryData(sessionHistory);
@@ -226,11 +257,21 @@ void ParsePacket(char *buffer, int n)
         {
         case EEventCode::SessionStarted:
             sSessionInfo->SessionStarted();
-            sLapData->ResetLapData();
+            sLapDeltas->ResetLapData();
             break;
         case EEventCode::SessionEnded:
             sSessionInfo->SessionStopped();
             sSessionHistory->StopSession();
+            try
+            {
+                const auto activeSessionUid = sSessionHistory->ActiveSessionUid();
+                SPDLOG_ERROR("Storing session history for {}", activeSessionUid);
+                sSessionHistory->StoreSessionHistory();
+            }
+            catch (const std::exception &e)
+            {
+                SPDLOG_ERROR("Storing session history caught exception {}", e.what());
+            }
             break;
         default:
             break;
@@ -244,6 +285,41 @@ void ParsePacket(char *buffer, int n)
 
 int main()
 {
+    // Logging setup
+    std::vector<spdlog::sink_ptr> sinks;
+
+#ifdef CONSOLE_LOG
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level(sLogConsoleLevel);
+    console_sink->set_pattern("[%^%l%$] %v");
+    sinks.push_back(console_sink);
+#endif
+
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(sLogFile, true);
+    file_sink->set_level(sLogFileLevel);
+    file_sink->set_pattern("%T [%^%8l%$] %-18s %v"); // Log level and file text alignment
+    sinks.push_back(file_sink);
+
+    auto logger = std::make_shared<spdlog::logger>("F1", begin(sinks), end(sinks));
+    logger->flush_on(sFlushLevel);
+
+    spdlog::set_default_logger(logger);
+    spdlog::set_level(sLogGlobalLevel);
+
+    SPDLOG_INFO("Starting F1 Telemetry");
+
+    // Initialize graphs
+    sSessionInfo = std::make_shared<CSessionInfo>();
+    sSessionHistory = std::make_shared<CSessionHistory>();
+    sTyreTemps = std::make_shared<CTyreTemps>();
+    sTyreWearGraph = std::make_shared<CTyreWearGraph>();
+    sCarDamageGraph = std::make_shared<CCarDamageGraph>();
+    sLapDeltas = std::make_shared<CLapDeltas>();
+    sLapInfoHeader = std::make_shared<CLapInfoHeader>();
+
+    // Initialize dashboard window
+    sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
+
     // Signal handler
     signal(SIGINT, signal_callback_handler);
     client = std::make_unique<CUdpClient>(sUdpPort);
@@ -285,11 +361,24 @@ int main()
                         DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
                         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
                         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
+    // Load fonts
+    auto defaultFont = io.Fonts->AddFontDefault();
+    auto mainTabsFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 20.0f);
+
+    // Session history tab fonts
+    auto tableHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/TitilliumWeb-Bold.ttf", 30.0f);
+    auto raceHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 18.0f);
+    auto sessionHeaderFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 17.0f);
+    auto generalTableFont = io.Fonts->AddFontFromFileTTF("misc/fonts/din1451altG.ttf", 16.5f);
+
+    sSessionHistory->SetFonts(tableHeaderFont, raceHeaderFont, sessionHeaderFont, generalTableFont);
+
+    auto sessionInfoFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 16.0f);
+    sSessionInfo->SetFont(sessionInfoFont);
 
     // Our state
-    static bool show_dashboard_window = true;
     static bool show_history_window = true;
-    static bool show_demo_window = false;
+    static bool show_demo_windows = false;
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -330,8 +419,8 @@ int main()
         mainWindowFlags |= ImGuiWindowFlags_NoResize;
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushFont(mainTabsFont);
 
-        // Main body of the window starts here.
         if (!ImGui::Begin("Main", &done, mainWindowFlags))
         {
             // Early out if the window is collapsed, as an optimization.
@@ -339,16 +428,20 @@ int main()
             return -1;
         }
 
-        // Always show
+        // Always show at bottom
         sSessionInfo->ShowSessionStatus();
+        auto ySpaceConsumed = 62.0f; // TODO: Magic Y-offset number
+        ImGui::SetCursorPos(ImGui::GetCursorStartPos());
 
         if (ImGui::BeginTabBar("MainTabs"))
         {
-            ImGui::SetNextWindowSize(ImGui::GetWindowContentRegionMax());
+            auto spaceAvail = ImGui::GetContentRegionMax();
+            spaceAvail.y -= ySpaceConsumed;
+            ImGui::SetNextWindowSize(spaceAvail);
 
             if (ImGui::BeginTabItem("Live"))
             {
-                sDashboard->ShowWindow(&show_dashboard_window);
+                sDashboard->ShowWindow(spaceAvail);
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("History"))
@@ -356,12 +449,12 @@ int main()
                 sSessionHistory->ShowSessionHistory(&show_history_window);
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("ImGui Demo"))
+            if (show_demo_windows && ImGui::BeginTabItem("ImGui Demo"))
             {
                 ImGui::ShowDemoWindow();
                 ImGui::EndTabItem();
             }
-            if (ImGui::BeginTabItem("ImPlot Demo"))
+            if (show_demo_windows && ImGui::BeginTabItem("ImPlot Demo"))
             {
                 ImPlot::ShowDemoWindow();
                 ImGui::EndTabItem();
@@ -369,6 +462,7 @@ int main()
             ImGui::EndTabBar();
         }
 
+        ImGui::PopFont();
         ImGui::PopStyleVar();
         ImGui::End();
 
@@ -409,6 +503,8 @@ int main()
         g_fenceLastSignaledValue = fenceValue;
         frameCtx->FenceValue = fenceValue;
     }
+
+    SPDLOG_INFO("Exit");
 
     client->stop();
     listener.join();
