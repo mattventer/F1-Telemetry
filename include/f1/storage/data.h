@@ -10,6 +10,7 @@ namespace SessionStorage
 {
     struct SLap
     {
+        bool complete{false};
         uint8_t lapNumber{0};
         uint16_t sector1MS{0};
         uint16_t sector2MS{0};
@@ -20,8 +21,9 @@ namespace SessionStorage
     struct SSessionData
     {
         uint64_t uid{0};
+        bool complete{false};
         F123::ESessionType sessionType{F123::ESessionType::Unknown};
-        std::vector<SLap> laps;
+        std::vector<SLap> laps{0};
 
         int fastestSec1LapNum{0};
         int fastestSec2LapNum{0};
@@ -33,6 +35,7 @@ namespace SessionStorage
     {
         std::string trackName{"Unknown"};
         std::string date{""};
-        std::vector<SSessionData> sessions;
+        std::vector<SSessionData> sessions{0};
+        bool complete{false};
     };
 }

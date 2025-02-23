@@ -151,12 +151,19 @@ public:
         std::tuple<int, int> location = FindSession(mySessionData.header.sessionUid);
         auto raceIdx = std::get<0>(location);
         auto sessionIdx = std::get<1>(location);
-        SPDLOG_TRACE("New session data: raceIdx {}, sessionIdx {}", raceIdx, sessionIdx);
+        SPDLOG_TRACE("New session data: uid {}, raceIdx {}, sessionIdx {}", mySessionData.header.sessionUid, raceIdx, sessionIdx);
 
         // Session doesn't exist, create a new one
         if (sessionIdx < 0)
         {
             SPDLOG_ERROR("Session UID {} doesn't exist but got SPacketSessionHistoryData for it", mySessionData.header.sessionUid);
+            return;
+        }
+
+        // No lap data yet
+        if (mySessionData.numLaps == 0)
+        {
+            SPDLOG_TRACE("Lap #{}, ignoring", mySessionData.numLaps);
             return;
         }
 
@@ -227,6 +234,7 @@ public:
     void StartSession(const uint64_t uid, const ETrackId trackId, const ESessionType sessionType)
     {
         SPDLOG_INFO("Starting session: {}", uid);
+        mActiveSessionUid = uid;
 
         if (sSessionTypeToString.find(sessionType) == sSessionTypeToString.end())
         {
@@ -236,11 +244,7 @@ public:
         mRecord = true;
         auto trackName = sTrackIdToString.at(trackId);
 
-        SPDLOG_TRACE("Track {}", trackName);
-
-        SessionStorage::SSessionData newSession;
-        newSession.uid = uid;
-        newSession.sessionType = sessionType;
+        SPDLOG_DEBUG("Track {}", trackName);
 
         // Find proper race week, if exists
         std::tuple<int, int> location = FindSession(uid);
@@ -250,18 +254,38 @@ public:
         // Already have this session, don't create a new one
         if (sessionIdx > -1)
         {
+            SPDLOG_TRACE("Session {} already exists, not creating a new one.", uid);
             return;
         }
         else
         {
-            // New race week, new session
-            SPDLOG_DEBUG("Creating new race weekend");
-            SessionStorage::SRaceWeekend newWeekend;
-            newWeekend.trackName = trackName;
-            time_t now = time(0);
-            newWeekend.date = std::string(ctime(&now));
-            newWeekend.sessions.push_back(newSession);
-            mRaces.push_back(newWeekend);
+            // TODO: Session doesn't exist, but may be continuing a previous race weekend
+            // Temporary bandaid (only works if the last stored race is the one resumed (ie not a different career/multiplayer race between))
+            if ((mRaces.size() > 0) && (mRaces.at(mRaces.size() - 1).trackName == trackName))
+            {
+                // New session for last weekend
+                SPDLOG_DEBUG("Creating new session for existing weekend at {}", trackName);
+                SessionStorage::SSessionData newSession;
+                newSession.uid = uid;
+                newSession.sessionType = sessionType;
+                mRaces.at(mRaces.size() - 1).sessions.push_back(newSession);
+            }
+            else
+            {
+                // New race week, new session
+                SPDLOG_DEBUG("Creating new race weekend and session");
+                SessionStorage::SRaceWeekend newWeekend;
+                newWeekend.trackName = trackName;
+                time_t now = time(0);
+                newWeekend.date = std::string(ctime(&now));
+
+                SessionStorage::SSessionData newSession;
+                newSession.uid = uid;
+                newSession.sessionType = sessionType;
+
+                newWeekend.sessions.push_back(newSession);
+                mRaces.push_back(newWeekend);
+            }
         }
     }
 
@@ -276,11 +300,17 @@ public:
     void StopSession()
     {
         mRecord = false;
+        mActiveSessionUid = 0;
     }
 
     bool SessionActive()
     {
         return mRecord;
+    }
+
+    uint16_t ActiveSessionUid()
+    {
+        return mActiveSessionUid;
     }
 
     void ShowSessionHistory(bool *p_open)
@@ -434,6 +464,7 @@ private:
     uint32_t mRacesLoaded{0}; // Number loaded from storage
 
     // Local race history
+    uint64_t mActiveSessionUid{0};
     bool mRecord{false};
     std::vector<SessionStorage::SRaceWeekend> mRaces;
 
@@ -446,21 +477,29 @@ private:
     // Return race idx and session idx if session uid exists
     std::tuple<int, int> FindSession(const uint64_t uid)
     {
-        int raceIdx = 0, sessionIdx = 0;
-
-        // Search race weekends
-        for (auto race : mRaces)
+        if (mRaces.size() > 0)
         {
-            // Search sessions
-            for (auto session : race.sessions)
+            int raceIdx = 0, sessionIdx = 0;
+            // Search race weekends
+            for (auto race : mRaces)
             {
-                if (session.uid == uid)
+                sessionIdx = 0;
+                // Search sessions
+                for (auto session : race.sessions)
                 {
-                    return std::tuple(raceIdx, sessionIdx);
+                    if (session.uid == uid)
+                    {
+                        SPDLOG_TRACE("Found existing session. raceIdx {}, sessionIdx {}", raceIdx, sessionIdx);
+                        return std::tuple(raceIdx, sessionIdx);
+                    }
+                    sessionIdx++;
                 }
-                sessionIdx++;
+                raceIdx++;
             }
-            raceIdx++;
+        }
+        else
+        {
+            SPDLOG_TRACE("Session {} does not exist", uid);
         }
 
         return std::tuple(-1, -1); // Does not exist

@@ -92,36 +92,56 @@ public:
         mMaxDelta = 0.01f;
         mMinDelta = FLT_MAX;
         memset(mXaxis, 0.0f, sizeof(mXaxis));
-        memset(mDeltas, 0.0f, sizeof(mDeltas));
+        memset(mDeltaLeader, 0.0f, sizeof(mDeltaLeader));
+        memset(mDeltaFront, 0.0f, sizeof(mDeltaLeader));
+        memset(mDeltaBehind, 0.0f, sizeof(mDeltaLeader));
     }
+
+    // void ShowDeltas(const ImVec2 spaceAvail) const
+    // {
+    //     if (mPlayerPosition > 1)
+    //     {
+    //         if (ImPlot::BeginPlot("Delta to leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
+    //         {
+    //             // Configure
+    //             ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
+    //             ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
+    //             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
+    //             ImPlot::SetNextLineStyle(red, 3);
+    //             ImPlot::PlotLine("Delta Leader (s)", mXaxis, mDeltaLeader, mDataCount);
+    //             ImPlot::EndPlot();
+    //         }
+    //     }
+    //     else
+    //     {
+    //         if (ImPlot::BeginPlot("Delta to car behind", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
+    //         {
+    //             // Configure
+    //             ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
+    //             ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
+    //             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
+    //             ImPlot::SetNextLineStyle(green, 3);
+    //             ImPlot::PlotLine("Delta Car behind (s)", mXaxis, mDeltaBehind, mDataCount, (ImPlotLineFlags_SkipNaN));
+    //             ImPlot::EndPlot();
+    //         }
+    //     }
+    // }
 
     void ShowDeltas(const ImVec2 spaceAvail) const
     {
-        if (mCarRacePosition > 1)
+        if (ImPlot::BeginPlot("Deltas (s)", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2))))
         {
-            if (ImPlot::BeginPlot("Delta to leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
-            {
-                // Configure
-                ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
-                ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
-                ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
-                ImPlot::SetNextLineStyle(red, 3);
-                ImPlot::PlotLine("Delta Leader (s)", mXaxis, mDeltas, mDataCount);
-                ImPlot::EndPlot();
-            }
-        }
-        else
-        {
-            if (ImPlot::BeginPlot("Delta to car behind", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
-            {
-                // Configure
-                ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
-                ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
-                ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
-                ImPlot::SetNextLineStyle(green, 3);
-                ImPlot::PlotLine("Delta Car behind (s)", mXaxis, mDeltas, mDataCount, (ImPlotLineFlags_SkipNaN));
-                ImPlot::EndPlot();
-            }
+            // Configure plot size
+            ImPlot::SetupAxisLimits(ImAxis_Y1, ((mMinDelta == FLT_MAX) ? 0.0f : mMinDelta / 2.0f), (mMaxDelta * 1.50f), ImPlotCond_Always);
+            ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
+            ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
+            ImPlot::SetNextLineStyle(yellow, 3);
+            ImPlot::PlotLine("Leader", mXaxis, mDeltaLeader, mDataCount);
+            ImPlot::SetNextLineStyle(red, 3);
+            ImPlot::PlotLine("Ahead", mXaxis, mDeltaFront, mDataCount);
+            ImPlot::SetNextLineStyle(green, 3);
+            ImPlot::PlotLine("Behind", mXaxis, mDeltaBehind, mDataCount);
+            ImPlot::EndPlot();
         }
     }
 
@@ -129,9 +149,15 @@ private:
     ImPlotAxisFlags mAxisFlagsX{0};
     ImPlotAxisFlags mAxisFlagsY{0};
     // Deltas
-    uint8_t mCarRacePosition{1};
+    uint8_t mPlayerPosition{1};
     uint32_t mCurrentLapTimeInMS{0};
-    float mDeltas[sMaxDataCount]{};
+
+    // Deltas (sec)
+    // float mDeltas[sMaxDataCount]{};
+    float mDeltaLeader[sMaxDataCount]{0}; // Delta to race leader
+    float mDeltaFront[sMaxDataCount]{0};  // Delta to car ahead of player
+    float mDeltaBehind[sMaxDataCount]{0}; // Delta to car behin player
+
     float mXaxis[sMaxDataCount]{};
     int mDataCount{0};
 
@@ -140,47 +166,77 @@ private:
 
     void SetDeltaData(const SLapData &myLapData, const SLapData &carBehindLapData)
     {
-        const auto currPosition = myLapData.carPosition;
-        const auto currLapTime = myLapData.currentLapTimeInMS;
+        uint16_t deltaLeaderMS = 0, deltaFrontMs = 0, deltaBehindMs = 0;
+        float deltaLeaderSec = 0, deltaFrontSec = 0, deltaBehindSec = 0;
+
+        const auto playerPosition = myLapData.carPosition;
+        const auto playerLapTime = myLapData.currentLapTimeInMS;
 
         // Took or lost leader position, new lap, max data reached
-        if ((currPosition == 1 && mCarRacePosition > 1) || (mCarRacePosition == 1 && currPosition > 1) || (mDataCount >= sMaxDataCount) || (currLapTime < mCurrentLapTimeInMS))
+        // if ((playerPosition == 1 && mPlayerPosition > 1) || (mPlayerPosition == 1 && playerPosition > 1) || (mDataCount >= sMaxDataCount) || (playerLapTime < mCurrentLapTimeInMS))
+        // {
+        //     ResetLapData();
+        // }
+        // New lap, or max data reached
+        if ((mDataCount >= sMaxDataCount) || (playerLapTime < mCurrentLapTimeInMS))
         {
             ResetLapData();
         }
-        mCarRacePosition = currPosition;
-        mCurrentLapTimeInMS = currLapTime;
+        mPlayerPosition = playerPosition;
+        mCurrentLapTimeInMS = playerLapTime;
 
-        uint16_t deltaMS;
-        if (mCarRacePosition > 1)
+        // Hoping these are 0 when player is the leader
+        deltaLeaderMS = myLapData.deltaToRaceLeaderInMS;
+        deltaFrontMs = myLapData.deltaToCarInFrontInMS;
+
+        // Is there a car behind the player?
+        if (carBehindLapData.carPosition > 1)
         {
-            deltaMS = myLapData.deltaToRaceLeaderInMS;
-        }
-        else
-        {
-            deltaMS = carBehindLapData.deltaToCarInFrontInMS;
+            deltaBehindMs = carBehindLapData.deltaToCarInFrontInMS;
         }
 
-        float deltaSecs = deltaMS / 1000.0f;
-        float currLapTimeSecs = currLapTime / 1000.0f;
+        deltaLeaderSec = deltaLeaderMS / 1000.0f;
+        deltaFrontSec = deltaFrontMs / 1000.0f;
+        deltaBehindSec = deltaBehindMs / 1000.0f;
 
         // Outlier when car behind gets overtaken
-        if (deltaMS == 0.0f || (mDataCount != 0 && deltaSecs > 5.0f && ((deltaSecs > (mDeltas[mDataCount - 1] * 2.5f)))))
+        // if (deltaMS == 0.0f || (mDataCount != 0 && deltaSecs > 5.0f && ((deltaSecs > (mDeltas[mDataCount - 1] * 2.5f)))))
+        // {
+        //     return;
+        // }
+
+        // Convert to seconds
+        mDeltaLeader[mDataCount] = deltaLeaderSec;
+        mDeltaFront[mDataCount] = deltaFrontSec;
+        mDeltaBehind[mDataCount] = deltaBehindSec;
+        mXaxis[mDataCount] = playerLapTime / 1000.0f;
+
+        // Chart Y-axis max
+        if (deltaLeaderSec > mMaxDelta)
         {
-            return;
+            mMaxDelta = deltaLeaderSec;
+        }
+        if (deltaFrontSec > mMaxDelta)
+        {
+            mMaxDelta = deltaFrontSec;
+        }
+        if (deltaBehindSec > mMaxDelta)
+        {
+            mMaxDelta = deltaBehindSec;
         }
 
-        mDeltas[mDataCount] = deltaSecs;
-        mXaxis[mDataCount] = currLapTimeSecs;
-
-        // Chart Y-axis min/max
-        if (deltaSecs > mMaxDelta)
+        // Chart Y-axis min
+        if (deltaLeaderSec < mMinDelta)
         {
-            mMaxDelta = deltaSecs;
+            mMinDelta = deltaLeaderSec;
         }
-        if (deltaSecs < mMinDelta)
+        if (deltaFrontSec < mMinDelta)
         {
-            mMinDelta = deltaSecs;
+            mMinDelta = deltaFrontSec;
+        }
+        if (deltaBehindSec < mMinDelta)
+        {
+            mMinDelta = deltaBehindSec;
         }
         mDataCount++;
     }

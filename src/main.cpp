@@ -32,7 +32,7 @@
 #include "backends/imgui_impl_dx12.h"
 #include "backends/imgui_impl_win32.h"
 
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG // TODO: This doesn't work, needed to modify in spdlog's common.h line 240
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
@@ -197,28 +197,31 @@ void ParsePacket(char *buffer, int n)
         SPacketLapData lapData;
         lapData.get(buffer);
         const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
-        SLapData carBehind;
+        SLapData carBehindLapData = {0};
+
+        // Make sure we are in a race
         if (myRacePosition < 21)
         {
             for (int i = 0; i < 22; ++i)
             {
+                // Car behind lap data
                 if (lapData.lapData[i].carPosition == myRacePosition + 1)
                 {
-                    carBehind = lapData.lapData[i];
+                    carBehindLapData = lapData.lapData[i];
                     break;
                 }
             }
         }
 
         sSessionInfo->SessionStarted();
-        sLapDeltas->SetLapData(lapData.lapData[playerIdx], carBehind);
+        sLapDeltas->SetLapData(lapData.lapData[playerIdx], carBehindLapData);
         sLapInfoHeader->SetCurrentLap(lapData.lapData[playerIdx].currentLapNum);
         break;
     }
     case EPacketId::Session:
     {
         const auto sessionUid = header.sessionUid;
-        sSessionInfo->SessionStarted();
+        // sSessionInfo->SessionStarted(); // Handled in events
         SPacketSessionData sessionData;
         sessionData.get(buffer);
 
@@ -230,7 +233,8 @@ void ParsePacket(char *buffer, int n)
         {
             sSessionHistory->StartSession(sessionUid, trackId, sessionType);
         }
-        // TODO: fix, always 0
+        // // TODO: fix, always 0
+        // SPDLOG_INFO("Pit: {}-{} rejoin: {}", sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
         // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
         break;
     }
@@ -258,7 +262,16 @@ void ParsePacket(char *buffer, int n)
         case EEventCode::SessionEnded:
             sSessionInfo->SessionStopped();
             sSessionHistory->StopSession();
-            sLapInfoHeader->SetPitLapWindow(0, 0, 0);
+            try
+            {
+                const auto activeSessionUid = sSessionHistory->ActiveSessionUid();
+                SPDLOG_ERROR("Storing session history for {}", activeSessionUid);
+                sSessionHistory->StoreSessionHistory();
+            }
+            catch (const std::exception &e)
+            {
+                SPDLOG_ERROR("Storing session history caught exception {}", e.what());
+            }
             break;
         default:
             break;

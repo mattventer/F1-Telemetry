@@ -148,7 +148,10 @@ public:
                 newRace.sessions.push_back(newSession);
             }
 
-            races.push_back(newRace); // TODO: pushing the race before checking if it should be
+            // Increment loaded race count, if it was passed
+            // TODO: pushing the race before checking if it should be
+            // This needs work
+            races.push_back(newRace);
             if (n != -1)
             {
                 i++;
@@ -190,12 +193,13 @@ public:
         int startIdx = races.size() - count;
         SPDLOG_DEBUG("startIdx {}", startIdx);
 
-        for (int i = startIdx; i < races.size(); ++i)
+        int newRaceIdx;
+        for (int newRaceIdx = startIdx; newRaceIdx < races.size(); ++newRaceIdx)
         {
             int firstSessionToStore = 0; // Some sessions might be stored already
             bool sessionExists = false;
             // Loop through sessions in memory
-            for (auto session : races[i].sessions)
+            for (auto session : races[newRaceIdx].sessions)
             {
                 sessionExists = false;
                 auto sessionUid = std::to_string(session.uid);
@@ -207,7 +211,7 @@ public:
 
                     SPDLOG_DEBUG("Checking if trackname {} has uid {}", trackNameAttr, sessionUid);
 
-                    if (trackNameAttr && std::string(trackNameAttr) == races[i].trackName)
+                    if (trackNameAttr && std::string(trackNameAttr) == races[newRaceIdx].trackName)
                     {
                         // Check if session uid exists in this race weekend
                         for (auto session = raceWkd->FirstChildElement(sSessionNodeKey); session != nullptr; session = session->NextSiblingElement())
@@ -215,7 +219,10 @@ public:
                             auto storedSessionUidAttr = session->Attribute(sSessionUidKey);
                             if (storedSessionUidAttr && std::string(storedSessionUidAttr) == sessionUid)
                             {
+                                // TODO: Check if all the laps of this session are in storage, if not add them
                                 SPDLOG_DEBUG("Found matching session on track {} {}/{} (new/stored)", trackNameAttr, sessionUid, std::string(storedSessionUidAttr));
+
+                                // Session at this index already exists, check next
                                 firstSessionToStore++;
                                 sessionExists = true;
                                 break;
@@ -231,43 +238,56 @@ public:
                 }
             }
 
-            if (firstSessionToStore >= races[i].sessions.size())
+            if (firstSessionToStore >= races[newRaceIdx].sessions.size())
             {
-                SPDLOG_DEBUG("All sessions within {} already exist in storage", races[i].trackName);
+                SPDLOG_DEBUG("All sessions within {} already exist in storage", races[newRaceIdx].trackName);
                 continue;
             }
 
-            SPDLOG_DEBUG("New race weekend on track {}", races[i].trackName);
+            SPDLOG_DEBUG("Session {} at {} does not exist in storage", races[newRaceIdx].sessions.at(firstSessionToStore).uid, races[newRaceIdx].trackName);
 
-            // New race weekend
-            auto raceNode = doc.NewElement(sRaceWeekendNodeKey);
-            raceNode->SetAttribute(sRaceWeekendTrackKey, races[i].trackName.c_str());
-            raceNode->SetAttribute(sRaceWeekendDateKey, races[i].date.c_str());
+            tinyxml2::XMLElement *raceNode;
+            // Was the last race weekend on the same track as this session?
+            auto lastRaceWknd = root->LastChildElement(sRaceWeekendNodeKey);
+            std::string lastRaceWkndTrack = std::string(lastRaceWknd->Attribute(sRaceWeekendTrackKey));
+            SPDLOG_DEBUG("Last stored track: {}, new track: {}", lastRaceWkndTrack, races[newRaceIdx].trackName);
+            if (lastRaceWkndTrack == races[newRaceIdx].trackName)
+            {
+                SPDLOG_DEBUG("Session {} {} track matches the most recent stored track {}", races[newRaceIdx].sessions.at(firstSessionToStore).uid, races[newRaceIdx].trackName, lastRaceWkndTrack);
+                raceNode = lastRaceWknd;
+            }
+            else
+            {
+                SPDLOG_DEBUG("New race weekend on track {}", races[newRaceIdx].trackName);
+                raceNode = doc.NewElement(sRaceWeekendNodeKey);
+                raceNode->SetAttribute(sRaceWeekendTrackKey, races[newRaceIdx].trackName.c_str());
+                raceNode->SetAttribute(sRaceWeekendDateKey, races[newRaceIdx].date.c_str());
+            }
 
-            SPDLOG_DEBUG("First session to store idx: {} / uid {}", firstSessionToStore, races[i].sessions[firstSessionToStore].uid);
+            SPDLOG_DEBUG("First session to store idx: {} / uid {}", firstSessionToStore, races[newRaceIdx].sessions[firstSessionToStore].uid);
 
             // Race sessions to be stored
-            for (int j = firstSessionToStore; j < races[i].sessions.size(); ++j)
+            for (int j = firstSessionToStore; j < races[newRaceIdx].sessions.size(); ++j)
             {
                 auto sessionNode = doc.NewElement(sSessionNodeKey);
-                sessionNode->SetAttribute(sSessionUidKey, std::to_string(races[i].sessions[j].uid).c_str());
-                sessionNode->SetAttribute(sSessionTypeKey, static_cast<uint8_t>(races[i].sessions[j].sessionType));
+                sessionNode->SetAttribute(sSessionUidKey, std::to_string(races[newRaceIdx].sessions[j].uid).c_str());
+                sessionNode->SetAttribute(sSessionTypeKey, static_cast<uint8_t>(races[newRaceIdx].sessions[j].sessionType));
 
                 auto fastestSec1LapNum = doc.NewElement(sFastestSec1LapNumNodeKey);
-                fastestSec1LapNum->SetText(std::to_string(races[i].sessions[j].fastestSec1LapNum).c_str());
+                fastestSec1LapNum->SetText(std::to_string(races[newRaceIdx].sessions[j].fastestSec1LapNum).c_str());
                 auto fastestSec2LapNum = doc.NewElement(sFastestSec2LapNumNodeKey);
-                fastestSec2LapNum->SetText(std::to_string(races[i].sessions[j].fastestSec2LapNum).c_str());
+                fastestSec2LapNum->SetText(std::to_string(races[newRaceIdx].sessions[j].fastestSec2LapNum).c_str());
                 auto fastestSec3LapNum = doc.NewElement(sFastestSec3LapNumNodeKey);
-                fastestSec3LapNum->SetText(std::to_string(races[i].sessions[j].fastestSec3LapNum).c_str());
+                fastestSec3LapNum->SetText(std::to_string(races[newRaceIdx].sessions[j].fastestSec3LapNum).c_str());
                 auto fastestLapNum = doc.NewElement(sFastestLapNumNodeKey);
-                fastestLapNum->SetText(std::to_string(races[i].sessions[j].fastestLapNum).c_str());
+                fastestLapNum->SetText(std::to_string(races[newRaceIdx].sessions[j].fastestLapNum).c_str());
                 sessionNode->InsertEndChild(fastestSec1LapNum);
                 sessionNode->InsertEndChild(fastestSec2LapNum);
                 sessionNode->InsertEndChild(fastestSec3LapNum);
                 sessionNode->InsertEndChild(fastestLapNum);
 
                 // Session laps
-                for (auto lap : races[i].sessions[j].laps)
+                for (auto lap : races[newRaceIdx].sessions[j].laps)
                 {
                     auto lapNode = doc.NewElement(sLapKey);
                     lapNode->SetAttribute(sLapNumKey, lap.lapNumber);

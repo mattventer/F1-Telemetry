@@ -9,6 +9,7 @@ Run f1dev.bat
 
 TODO:
 	* Put the code in .cpp files, come on man
-	* Figure out why opening any race that is not in the .xml causes a crash
-	* Starting a new race/practice on a track that already exists in storage results in the new session being appended to the previous race weekend, instead of creating a new one
-		* This was observed prior to clicking save, so when starting a new session (while only in memory, before storing in xml) there is something wrote (not checking uid? just trackname probably) 
+	* Getting session type 15, which doesn't exist. Check header parsing is correct
+	* When saving multiple sessions for 1 race weekend it stores in XML as multiple weekends, 1 session per weekend
+		* prior to saving it is correct. Something wrong with either saving or loading. Check storage xml
+			* This might have been fixed, needs testing
