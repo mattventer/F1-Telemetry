@@ -37,3 +37,7 @@ storage_testing/
 *.exe
 *.out
 *.app
+
+# Custom
+*.txt
+*- Shortcut.lnk
