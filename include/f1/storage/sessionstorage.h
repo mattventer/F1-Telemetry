@@ -247,11 +247,15 @@ public:
             SPDLOG_DEBUG("Session {} at {} does not exist in storage", races[newRaceIdx].sessions.at(firstSessionToStore).uid, races[newRaceIdx].trackName);
 
             tinyxml2::XMLElement *raceNode;
+            std::string lastRaceWkndTrack{""};
             // Was the last race weekend on the same track as this session?
             auto lastRaceWknd = root->LastChildElement(sRaceWeekendNodeKey);
-            std::string lastRaceWkndTrack = std::string(lastRaceWknd->Attribute(sRaceWeekendTrackKey));
+            if (lastRaceWknd)
+            {
+                lastRaceWkndTrack = std::string(lastRaceWknd->Attribute(sRaceWeekendTrackKey));
+            }
             SPDLOG_DEBUG("Last stored track: {}, new track: {}", lastRaceWkndTrack, races[newRaceIdx].trackName);
-            if (lastRaceWkndTrack == races[newRaceIdx].trackName)
+            if ((lastRaceWknd) && (lastRaceWkndTrack == races[newRaceIdx].trackName))
             {
                 SPDLOG_DEBUG("Session {} {} track matches the most recent stored track {}", races[newRaceIdx].sessions.at(firstSessionToStore).uid, races[newRaceIdx].trackName, lastRaceWkndTrack);
                 raceNode = lastRaceWknd;

@@ -4,8 +4,8 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "f123constants.h"
-#include "packets/sessionhistory.h"
+#include "f123/constants.h"
+#include "f123/packets/sessionhistory.h"
 #include "spdlog/spdlog.h"
 #include "storage/data.h"
 #include "storage/sessionstorage.h"
@@ -138,6 +138,7 @@ public:
         }
     }
 
+    // TODO: Change to generic struct - not packet
     void SetSessionHistoryData(const SPacketSessionHistoryData &mySessionData)
     {
         SPDLOG_TRACE("SetSessionHistoryData() entry");

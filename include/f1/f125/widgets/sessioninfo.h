@@ -4,7 +4,7 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "packets/session.h"
+#include "f123/session.h"
 #include "spdlog/spdlog.h"
 
 #include <array>
@@ -47,10 +47,11 @@ public:
         mPort = port;
     }
 
-    void NewPacket()
+    void NewPacket(const uint16_t year)
     {
         time_t now = time(0);
         mLastPacketTime = std::string(ctime(&now));
+        mPacketVersion = year;
     }
 
     void ShowSessionStatus() const
@@ -66,17 +67,31 @@ public:
         ImGui::Text(mLastPacketTime.c_str());
         ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 120);
+        uint8_t offset = (mPacketVersion == 0) ? 120 : 175;
+        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - offset);
         ImGui::Text("Session:");
         ImGui::SameLine();
         ImGui::TextColored((mSessionActive ? green : red),
                            (mSessionActive ? "Active" : "Inactive")); // From constants.h
+
+        // Packet version (if set)
+        if (mPacketVersion != 0)
+        {
+            ImGui::SameLine();
+            ImGui::Text("(");
+            ImGui::SameLine();
+            ImGui::Text(std::to_string(mPacketVersion).c_str());
+            ImGui::SameLine();
+            ImGui::Text(")");
+        }
+
         ImGui::PopFont();
     }
 
 private:
     bool mSessionActive{false};
     std::string mLastPacketTime{"Never"};
+    uint16_t mPacketVersion{0};
     int mPort{-1};
 
     // Style

@@ -4,8 +4,8 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "f123constants.h"
-#include "packets/session.h"
+#include "f123/constants.h"
+#include "f123/session.h"
 #include "spdlog/spdlog.h"
 
 #include <array>

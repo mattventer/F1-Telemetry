@@ -4,7 +4,7 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "packets/cardamage.h"
+#include "f125/cardamage.h"
 #include "spdlog/spdlog.h"
 
 #include <array>
