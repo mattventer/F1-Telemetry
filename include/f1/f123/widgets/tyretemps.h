@@ -17,7 +17,7 @@ class CTyreTemps23 : public ITyreTemps
 public:
     CTyreTemps23()
     {
-        SPDLOG_TRACE("CTyreTemps()");
+        SPDLOG_TRACE("CTyreTemps23()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
@@ -62,14 +62,14 @@ public:
             const double positions[] = {0, 1, 2, 3};
             // Configure
             ImPlot::SetupAxisLimits(ImAxis_Y1, 60, 130);
-            ImPlot::SetupAxisLimits(ImAxis_X1, sMinX - 0.5, item_count - 0.5);
+            ImPlot::SetupAxisLimits(ImAxis_X1, F1::sMinX - 0.5, item_count - 0.5);
             ImPlot::SetupAxisTicks(ImAxis_X1, positions, item_count, mLabels);
             ImPlot::SetupAxis(ImAxis_X1, "", mAxisFlagsX);
             ImPlot::SetupAxis(ImAxis_Y1, "", mAxisFlagsY);
 
             for (int i = 0; i < item_count; ++i)
             {
-                ImPlot::SetNextFillStyle(TyreInnerTempToColor(mActualCompound, mTyreInnerTemps[i]));
+                ImPlot::SetNextFillStyle(F1::TyreInnerTempToColor(mActualCompound, mTyreInnerTemps[i]));
                 ImPlot::PlotBars(mLabels[i], &mTyreInnerTemps[i], 1, 0.95, i);
             }
 

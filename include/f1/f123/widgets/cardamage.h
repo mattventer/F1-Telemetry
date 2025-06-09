@@ -15,7 +15,7 @@ class CCarDamageGraph23 : public ICarDamageGraph
 public:
     CCarDamageGraph23()
     {
-        SPDLOG_TRACE("CCarDamageGraph()");
+        SPDLOG_TRACE("CCarDamageGraph23()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
@@ -55,8 +55,8 @@ public:
         {
             static const double positions[] = {0, 1, 2, 3, 4, 5, 6, 7};
             // Configure
-            ImPlot::SetupAxisLimits(ImAxis_Y1, sMinY, sMaxY);
-            ImPlot::SetupAxisLimits(ImAxis_X1, sMinX - 0.5, 8 - 0.5);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, F1::sMinY, F1::sMaxY);
+            ImPlot::SetupAxisLimits(ImAxis_X1, F1::sMinX - 0.5, 8 - 0.5);
             ImPlot::SetupAxisTicks(ImAxis_X1, positions, 8, mLabels);
             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
             ImPlot::SetupAxis(ImAxis_Y1, nullptr, mAxisFlagsY);
@@ -64,7 +64,7 @@ public:
             for (int i = 0; i < 8; ++i)
             {
                 // Set color
-                ImPlot::SetNextFillStyle(CarDamageToColor(mCarDamageData[i]));
+                ImPlot::SetNextFillStyle(F1::CarDamageToColor(mCarDamageData[i]));
                 ImPlot::PlotBars(mLabels[i], &mCarDamageData[i], 1, 0.95, i);
             }
             ImPlot::EndPlot();

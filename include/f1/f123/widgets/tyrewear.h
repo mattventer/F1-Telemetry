@@ -14,7 +14,7 @@ class CTyreWearGraph23 : public ITyreWearGraph
 public:
     CTyreWearGraph23()
     {
-        SPDLOG_TRACE("CTyreWearGraph()");
+        SPDLOG_TRACE("CTyreWearGraph23()");
 
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
@@ -52,8 +52,8 @@ public:
         {
             const double positions[] = {0, 1, 2, 3};
             // Configure
-            ImPlot::SetupAxisLimits(ImAxis_Y1, sMinY, sMaxY);
-            ImPlot::SetupAxisLimits(ImAxis_X1, sMinX - 0.5, item_count - 0.5);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, F1::sMinY, F1::sMaxY);
+            ImPlot::SetupAxisLimits(ImAxis_X1, F1::sMinX - 0.5, item_count - 0.5);
             ImPlot::SetupAxisTicks(ImAxis_X1, positions, item_count, mLabels);
             ImPlot::SetupAxis(ImAxis_X1, "", mAxisFlagsX);
             ImPlot::SetupAxis(ImAxis_Y1, "", mAxisFlagsY);
@@ -61,7 +61,7 @@ public:
             for (int i = 0; i < item_count; ++i)
             {
                 // Set color
-                ImPlot::SetNextFillStyle(TyreWearToColor(mTyreWearData[i]));
+                ImPlot::SetNextFillStyle(F1::TyreWearToColor(mTyreWearData[i]));
                 ImPlot::PlotBars(mLabels[i], &mTyreWearData[i], 1, 0.95, i);
             }
 

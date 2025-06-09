@@ -18,7 +18,6 @@
 #include <tuple>
 #include <vector>
 
-using namespace F123;
 using namespace SessionStorage;
 
 namespace
@@ -139,7 +138,7 @@ public:
     }
 
     // TODO: Change to generic struct - not packet
-    void SetSessionHistoryData(const SPacketSessionHistoryData &mySessionData)
+    void SetSessionHistoryData(const F123::SPacketSessionHistoryData &mySessionData)
     {
         SPDLOG_TRACE("SetSessionHistoryData() entry");
         // Don't care
@@ -232,18 +231,19 @@ public:
         mRaces.at(raceIdx).sessions.at(sessionIdx).fastestSec3LapNum = mySessionData.bestSector3LapNum;
     }
 
-    void StartSession(const uint64_t uid, const ETrackId trackId, const ESessionType sessionType)
+    // TODO: Make more generic for both 23/25 callers
+    void StartSession(const uint64_t uid, const F123::ETrackId trackId, const F123::ESessionType sessionType)
     {
         SPDLOG_INFO("Starting session: {}", uid);
         mActiveSessionUid = uid;
 
-        if (sSessionTypeToString.find(sessionType) == sSessionTypeToString.end())
+        if (F123::sSessionTypeToString.find(sessionType) == F123::sSessionTypeToString.end())
         {
             SPDLOG_WARN("Could not find session type {}", (uint8_t)sessionType);
         }
 
         mRecord = true;
-        auto trackName = sTrackIdToString.at(trackId);
+        auto trackName = F123::sTrackIdToString.at(trackId);
 
         SPDLOG_DEBUG("Track {}", trackName);
 
@@ -376,13 +376,13 @@ public:
 
                         // TODO: Getting session type 15 which does not exist? Maybe when race is quit then resumed?
                         std::string sessionTypeStr;
-                        if (sSessionTypeToString.find(session->sessionType) == sSessionTypeToString.end())
+                        if (F123::sSessionTypeToString.find(session->sessionType) == F123::sSessionTypeToString.end())
                         {
                             sessionTypeStr = std::to_string((uint8_t)session->sessionType);
                         }
                         else
                         {
-                            sessionTypeStr = sSessionTypeToString.at(session->sessionType);
+                            sessionTypeStr = F123::sSessionTypeToString.at(session->sessionType);
                         }
 
                         const std::string sessionHeaderStr = sessionTypeStr + " [" + std::to_string(session->uid) + "]";
@@ -403,28 +403,28 @@ public:
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec1LapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 ImGui::Text("%.3f", lap->sector1MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec2LapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 ImGui::Text("%.3f", lap->sector2MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec3LapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 ImGui::Text("%.3f", lap->sector3MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestLapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 auto seconds = lap->totalLapTime / sMsPerSec;
                                 int min = seconds / sSecPerMin;

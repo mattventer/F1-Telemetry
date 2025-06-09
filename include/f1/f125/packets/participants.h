@@ -6,7 +6,7 @@
 #include <iostream>
 #include <memory>
 
-namespace F123
+namespace F125
 {
 
     struct SParticipantsData
@@ -117,5 +117,4 @@ namespace F123
                        << "}" << std::endl;
         }
     };
-
 }

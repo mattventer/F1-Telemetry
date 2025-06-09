@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace
+namespace F1
 {
     constexpr int sMinY = 0;
     constexpr int sMinX = 0;

@@ -15,7 +15,7 @@ class CLapInfoHeader23 : public ILapInfoHeader
 public:
     CLapInfoHeader23()
     {
-        SPDLOG_TRACE("CLapInfoHeader()");
+        SPDLOG_TRACE("CLapInfoHeader23()");
     }
 
     void SetPitLapWindow(const uint8_t min, const uint8_t max, const uint8_t rejoinPos) override
@@ -44,7 +44,7 @@ public:
         auto textWidth = ImGui::CalcTextSize(text).x;
 
         ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
-        ImGui::TextColored(teal, text);
+        ImGui::TextColored(F1::teal, text);
 
         return ImGui::GetCursorPosY();
     }

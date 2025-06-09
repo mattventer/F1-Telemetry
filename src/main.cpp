@@ -10,7 +10,7 @@
 
 #include "f1telemetry.h"
 #include "f123/f123telemetry.h"
-// #include "f125/f125telemetry.h"
+#include "f125/f125telemetry.h"
 #include "header.h"
 #include "udpserver.h"
 #include "f123/widgets/cardamage.h"
@@ -18,6 +18,14 @@
 #include "f123/widgets/lapinfoheader.h"
 #include "f123/widgets/sessioninfo.h"
 #include "f123/widgets/tyrewear.h"
+#include "f123/widgets/tyretemps.h"
+
+#include "f125/widgets/cardamage.h"
+#include "f125/widgets/lapdeltas.h"
+#include "f125/widgets/lapinfoheader.h"
+#include "f125/widgets/sessioninfo.h"
+#include "f125/widgets/tyrewear.h"
+#include "f125/widgets/tyretemps.h"
 
 #include "windows/dashboard.h"
 #include "windows/sessionhistory.h"
@@ -62,12 +70,21 @@ std::shared_ptr<CTyreWearGraph23> sTyreWearGraph23;
 std::shared_ptr<CLapInfoHeader23> sLapInfoHeader23;
 std::shared_ptr<CLapDeltas23> sLapDeltas23;
 
+// F125 Graphs
+std::shared_ptr<CSessionInfo25> sSessionInfo25;
+std::shared_ptr<CCarDamageGraph25> sCarDamageGraph25;
+std::shared_ptr<CTyreTemps25> sTyreTemps25;
+std::shared_ptr<CTyreWearGraph25> sTyreWearGraph25;
+std::shared_ptr<CLapInfoHeader25> sLapInfoHeader25;
+std::shared_ptr<CLapDeltas25> sLapDeltas25;
+
 // Handlers
 std::unique_ptr<CF123Telemetry> sF123Telemetry;
-// std::unique_ptr<CF125Telemetry> sF125Telemetry;
+std::unique_ptr<CF125Telemetry> sF125Telemetry;
 
 // Windows
 std::shared_ptr<CDashboard> sDashboard23;
+std::shared_ptr<CDashboard> sDashboard25;
 std::shared_ptr<CSessionHistory> sSessionHistory;
 
 // Static variables
@@ -132,7 +149,7 @@ void ParsePacket(char *buffer, int n)
         break;
     case 2025:
         sActiveYear = 2025;
-        // sF125Telemetry->ParsePacket(buffer, header);
+        sF125Telemetry->ParsePacket(buffer, header);
         break;
     default:
         SPDLOG_WARN("Incorrect packet format {}", header.packetFormat);
@@ -173,11 +190,15 @@ int main()
     sLapDeltas23 = std::make_shared<CLapDeltas23>();
     sLapInfoHeader23 = std::make_shared<CLapInfoHeader23>();
 
-    // Initialize windows
-    sSessionHistory = std::make_shared<CSessionHistory>();
-    sDashboard23 = std::make_shared<CDashboard>(sTyreWearGraph23, sTyreTemps23, sCarDamageGraph23, sLapDeltas23, sLapInfoHeader23);
+    // Initialize F123 graphs
+    sSessionInfo25 = std::make_shared<CSessionInfo25>();
+    sCarDamageGraph25 = std::make_shared<CCarDamageGraph25>();
+    sTyreTemps25 = std::make_shared<CTyreTemps25>();
+    sTyreWearGraph25 = std::make_shared<CTyreWearGraph25>();
+    sLapDeltas25 = std::make_shared<CLapDeltas25>();
+    sLapInfoHeader25 = std::make_shared<CLapInfoHeader25>();
 
-    // Initialize 2023 handlers
+    // Initialize F123 handlers
     SF1TelemetryResources rsrcs23;
     rsrcs23.sessionInfo = sSessionInfo23;
     rsrcs23.sessionHistory = sSessionHistory;
@@ -188,8 +209,21 @@ int main()
     rsrcs23.lapInfoHeader = sLapInfoHeader23;
     sF123Telemetry = std::make_unique<CF123Telemetry>(rsrcs23);
 
-    // TODO: Initialize 2025 handlers
-    // sF125Telemetry = std::make_unique<CF125Telemetry>(rsrcs);
+    // Initialize F123 handlers
+    SF1TelemetryResources rsrcs25;
+    rsrcs25.sessionInfo = sSessionInfo25;
+    rsrcs25.sessionHistory = sSessionHistory;
+    rsrcs25.tyreTemps = sTyreTemps25;
+    rsrcs25.tyreWearGraph = sTyreWearGraph25;
+    rsrcs25.carDamageGraph = sCarDamageGraph25;
+    rsrcs25.lapDeltas = sLapDeltas25;
+    rsrcs25.lapInfoHeader = sLapInfoHeader25;
+    sF125Telemetry = std::make_unique<CF125Telemetry>(rsrcs23);
+
+    // Initialize windows
+    sSessionHistory = std::make_shared<CSessionHistory>();
+    sDashboard23 = std::make_shared<CDashboard>(sTyreWearGraph23, sTyreTemps23, sCarDamageGraph23, sLapDeltas23, sLapInfoHeader23);
+    sDashboard25 = std::make_shared<CDashboard>(sTyreWearGraph25, sTyreTemps25, sCarDamageGraph25, sLapDeltas25, sLapInfoHeader25);
 
     // Signal handler
     signal(SIGINT, signal_callback_handler);
@@ -198,7 +232,7 @@ int main()
     listener = std::thread(&CUdpClient::start, *client, ParsePacket);
 
     sSessionInfo23->SetSocketInfo(sUdpPort);
-    // TODO: 25
+    sSessionInfo25->SetSocketInfo(sUdpPort);
 
     // Create application window
     // ImGui_ImplWin32_EnableDpiAwareness();
@@ -247,7 +281,7 @@ int main()
 
     auto sessionInfoFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 16.0f);
     sSessionInfo23->SetFont(sessionInfoFont);
-    // TODO: 25
+    sSessionInfo25->SetFont(sessionInfoFont);
 
     // Our state
     static bool show_history_window = true;
@@ -302,7 +336,15 @@ int main()
         }
 
         // Always show at bottom
-        sSessionInfo23->ShowSessionStatus(); // TODO: 25
+        if (sActiveYear == 2025)
+        {
+            sSessionInfo25->ShowSessionStatus();
+        }
+        else
+        {
+            // Default to 2023
+            sSessionInfo23->ShowSessionStatus();
+        }
 
         auto ySpaceConsumed = 62.0f; // TODO: Magic Y-offset number
         ImGui::SetCursorPos(ImGui::GetCursorStartPos());
@@ -319,9 +361,9 @@ int main()
                 {
                     sDashboard23->ShowWindow(spaceAvail);
                 }
-                else
+                else if (sActiveYear == 2025)
                 {
-                    sDashboard23->ShowWindow(spaceAvail); // TODO: update when 2025 complete
+                    sDashboard25->ShowWindow(spaceAvail);
                 }
                 ImGui::EndTabItem();
             }

@@ -21,7 +21,7 @@ class CLapDeltas23 : public ILapDeltas
 public:
     CLapDeltas23()
     {
-        SPDLOG_TRACE("CLapDeltas()");
+        SPDLOG_TRACE("CLapDeltas23()");
 
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_AutoFit;
@@ -99,11 +99,11 @@ public:
             ImPlot::SetupAxisLimits(ImAxis_Y1, ((mMinDelta == FLT_MAX) ? 0.0f : mMinDelta / 2.0f), (mMaxDelta * 1.50f), ImPlotCond_Always);
             ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
-            ImPlot::SetNextLineStyle(yellow, 3);
+            ImPlot::SetNextLineStyle(F1::yellow, 3);
             ImPlot::PlotLine("Leader", mXaxis, mDeltaLeader, mDataCount);
-            ImPlot::SetNextLineStyle(red, 3);
+            ImPlot::SetNextLineStyle(F1::red, 3);
             ImPlot::PlotLine("Ahead", mXaxis, mDeltaFront, mDataCount);
-            ImPlot::SetNextLineStyle(green, 3);
+            ImPlot::SetNextLineStyle(F1::green, 3);
             ImPlot::PlotLine("Behind", mXaxis, mDeltaBehind, mDataCount);
             ImPlot::EndPlot();
         }

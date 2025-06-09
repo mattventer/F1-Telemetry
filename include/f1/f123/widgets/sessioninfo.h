@@ -14,41 +14,36 @@
 #include <memory>
 #include <string>
 
-namespace
-{
-    static const float topPadding = 28.0f;
-}
-
 class CSessionInfo23 : public ISessionInfo
 {
 public:
     CSessionInfo23()
     {
-        SPDLOG_TRACE("CSessionInfo()");
+        SPDLOG_TRACE("CSessionInfo23()");
     }
 
-    void SetFont(ImFont *font)
+    void SetFont(ImFont *font) override
     {
         mFont = font;
     }
 
-    void SessionStarted()
+    void SessionStarted() override
     {
         mSessionActive = true;
     }
 
-    void SessionStopped()
+    void SessionStopped() override
     {
         mSessionActive = false;
     }
 
     // TODO: include ip
-    void SetSocketInfo(const int port)
+    void SetSocketInfo(const int port) override
     {
         mPort = port;
     }
 
-    void NewPacket(const uint16_t year)
+    void NewPacket(const uint16_t year) override
     {
         time_t now = time(0);
         mLastPacketTime = std::string(ctime(&now));
@@ -61,6 +56,8 @@ public:
         ImGui::Separator();
         ImGui::SetCursorPosY(ImGui::GetWindowContentRegionMax().y - 17);
         ImGui::PushFont(mFont);
+        ImGui::Text("(v23)");
+        ImGui::SameLine();
         ImGui::Text("Listening port:");
         ImGui::SameLine();
         ImGui::Text(std::to_string(mPort).c_str()); // gross
@@ -72,7 +69,7 @@ public:
         ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - offset);
         ImGui::Text("Session:");
         ImGui::SameLine();
-        ImGui::TextColored((mSessionActive ? green : red),
+        ImGui::TextColored((mSessionActive ? F1::green : F1::red),
                            (mSessionActive ? "Active" : "Inactive")); // From constants.h
 
         // Packet version (if set)
