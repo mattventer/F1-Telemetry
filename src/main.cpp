@@ -88,7 +88,7 @@ std::shared_ptr<CDashboard> sDashboard25;
 std::shared_ptr<CSessionHistory> sSessionHistory;
 
 // Static variables
-static uint16_t sActiveYear{2023}; // 2023 default
+static volatile uint16_t sActiveYear{2023}; // 2023 default
 
 struct FrameContext
 {
@@ -182,6 +182,9 @@ int main()
 
     SPDLOG_TRACE("Starting F1 Telemetry");
 
+    // Initialize common objects
+    sSessionHistory = std::make_shared<CSessionHistory>();
+
     // Initialize F123 graphs
     sSessionInfo23 = std::make_shared<CSessionInfo23>();
     sCarDamageGraph23 = std::make_shared<CCarDamageGraph23>();
@@ -221,7 +224,6 @@ int main()
     sF125Telemetry = std::make_unique<CF125Telemetry>(rsrcs23);
 
     // Initialize windows
-    sSessionHistory = std::make_shared<CSessionHistory>();
     sDashboard23 = std::make_shared<CDashboard>(sTyreWearGraph23, sTyreTemps23, sCarDamageGraph23, sLapDeltas23, sLapInfoHeader23);
     sDashboard25 = std::make_shared<CDashboard>(sTyreWearGraph25, sTyreTemps25, sCarDamageGraph25, sLapDeltas25, sLapInfoHeader25);
 

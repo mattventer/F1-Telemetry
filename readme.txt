@@ -8,7 +8,7 @@ Run f1dev.bat
 
 
 TODO:
-	* Put all packets in respective namespace
+	* Missing OSQ sector 3 times in storage (probably before it gets to storage too)
 	* Put the code in .cpp files, come on man
 	* Getting session type 15, which doesn't exist. Check header parsing is correct
 	* When saving multiple sessions for 1 race weekend it stores in XML as multiple weekends, 1 session per weekend

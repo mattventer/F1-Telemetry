@@ -38,26 +38,29 @@ public:
         mSessionInfo->NewPacket(header.packetFormat);
 
         // Parse based on packet id
-        const EPacketId id = sPacketIds[header.packetId];
+        const F123::EPacketId id = F123::sPacketIds[header.packetId];
         const int playerIdx = header.playerCarIndex;
 
         switch (id)
         {
-        case EPacketId::Participants:
+        case F123::EPacketId::Participants:
         {
+            SPDLOG_TRACE("EPacketId::Participants");
             // SPacketParticipantsData packetParticipantsData;
             // packetParticipantsData.get(packet);
             break;
         }
-        case EPacketId::CarSetups:
+        case F123::EPacketId::CarSetups:
         {
+            SPDLOG_TRACE("EPacketId::CarSetups");
             // SPacketCarSetupData carSetup;
             // carSetup.get(packet);
             break;
         }
-        case EPacketId::CarStatus:
+        case F123::EPacketId::CarStatus:
         {
-            SPacketCarStatusData carStatus;
+            SPDLOG_TRACE("EPacketId::CarStatus");
+            F123::SPacketCarStatusData carStatus;
             carStatus.get(packet);
             try
             {
@@ -69,9 +72,10 @@ public:
             }
             break;
         }
-        case EPacketId::CarTelemetry:
+        case F123::EPacketId::CarTelemetry:
         {
-            SPacketCarTelemetryData carTelemetry;
+            SPDLOG_TRACE("EPacketId::CarTelemetry");
+            F123::SPacketCarTelemetryData carTelemetry;
             carTelemetry.get(packet);
 
             std::array<uint8_t, 4> tyreInnerTemps;
@@ -83,9 +87,10 @@ public:
             mTyreTemps->SetTyreInnerTemps(tyreInnerTemps);
             break;
         }
-        case EPacketId::CarDamage:
+        case F123::EPacketId::CarDamage:
         {
-            SPacketCarDamageData damage;
+            SPDLOG_TRACE("EPacketId::CarDamage");
+            F123::SPacketCarDamageData damage;
             damage.get(packet);
 
             std::array<float, 4> tyreWear;
@@ -95,7 +100,7 @@ public:
                 tyreWear[i] = damage.carDamageData[playerIdx].tyresWear[i];
             }
             // TODO: move CTyreWear into CCarDamage
-            // mTyreWearGraph->SetTyreWear(tyreWear);
+            mTyreWearGraph->SetTyreWear(tyreWear);
 
             SCarDamageGraphData graphData;
             graphData.engineDamage = damage.carDamageData[playerIdx].engineDamage;
@@ -109,12 +114,13 @@ public:
             mCarDamageGraph->SetCarDamage(graphData);
             break;
         }
-        case EPacketId::LapData:
+        case F123::EPacketId::LapData:
         {
-            SPacketLapData lapData;
+            SPDLOG_TRACE("EPacketId::LapData");
+            F123::SPacketLapData lapData;
             lapData.get(packet);
             const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
-            SLapData carBehindLapData = {0};
+            F123::SLapData carBehindLapData = {0};
 
             // Make sure we are in a race
             if (myRacePosition < 21)
@@ -147,27 +153,35 @@ public:
             mLapInfoHeader->SetCurrentLap(lapData.lapData[playerIdx].currentLapNum);
             break;
         }
-        case EPacketId::Session:
+        case F123::EPacketId::Session:
         {
-            SPacketSessionData sessionData;
+            SPDLOG_TRACE("EPacketId::Session");
+            F123::SPacketSessionData sessionData;
+            F123::ETrackId trackId;
+            F123::ESessionType sessionType;
             sessionData.get(packet);
 
-            auto trackId = static_cast<ETrackId>(sessionData.trackId);
-            auto sessionType = static_cast<ESessionType>(sessionData.sessionType);
+            try
+            {
+                trackId = static_cast<F123::ETrackId>(sessionData.trackId);
+                sessionType = static_cast<F123::ESessionType>(sessionData.sessionType);
+            }
+            catch (const std::exception &e)
+            {
+                SPDLOG_ERROR("static cast error");
+                break;
+            }
 
             // Banking on this always coming before LapData
             if (!mSessionHistory->SessionActive())
             {
                 mSessionHistory->StartSession(header.sessionUid, trackId, sessionType);
             }
-
-            // // TODO: fix, always 0
-            // SPDLOG_INFO("Pit: {}-{} rejoin: {}", sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
-            // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
             break;
         }
-        case EPacketId::SessionHistory:
+        case F123::EPacketId::SessionHistory:
         {
+            SPDLOG_TRACE("EPacketId::SessionHistory");
             SPacketSessionHistoryData sessionHistory;
             sessionHistory.get(packet);
 
@@ -179,15 +193,16 @@ public:
             }
             break;
         }
-        case EPacketId::Event:
+        case F123::EPacketId::Event:
         {
-            SPacketEventData event;
+            SPDLOG_TRACE("EPacketId::Event");
+            F123::SPacketEventData event;
             switch (event.getCode(packet))
             {
-            case EEventCode::SessionStarted:
+            case F123::EEventCode::SessionStarted:
                 mSessionInfo->SessionStarted();
                 break;
-            case EEventCode::SessionEnded:
+            case F123::EEventCode::SessionEnded:
                 mSessionInfo->SessionStopped();
                 mSessionHistory->StopSession();
                 try
