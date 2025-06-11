@@ -5,6 +5,9 @@
 
 #include "constants.h"
 #include "f123/constants.h"
+#include "f125/constants.h"
+#include "f1telemetry.h"
+
 #include "f123/packets/sessionhistory.h"
 #include "spdlog/spdlog.h"
 #include "storage/data.h"

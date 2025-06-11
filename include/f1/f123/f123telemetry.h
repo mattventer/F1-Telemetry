@@ -35,10 +35,15 @@ public:
             return;
         }
 
-        mSessionInfo->NewPacket(header.packetFormat);
+        mSessionInfo->NewPacket();
 
-        // Parse based on packet id
-        const F123::EPacketId id = F123::sPacketIds[header.packetId];
+        // Invalid
+        if (header.packetId > F123::EPacketId::Max)
+        {
+            return;
+        }
+
+        const auto id = F123::EPacketId(header.packetId);
         const int playerIdx = header.playerCarIndex;
 
         switch (id)

@@ -43,11 +43,10 @@ public:
         mPort = port;
     }
 
-    void NewPacket(const uint16_t year) override
+    void NewPacket() override
     {
         time_t now = time(0);
         mLastPacketTime = std::string(ctime(&now));
-        mPacketVersion = year;
     }
 
     void ShowSessionStatus() const override
@@ -65,23 +64,11 @@ public:
         ImGui::Text(mLastPacketTime.c_str());
         ImGui::SameLine();
 
-        uint8_t offset = (mPacketVersion == 0) ? 120 : 175;
-        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - offset);
+        ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - 120);
         ImGui::Text("Session:");
         ImGui::SameLine();
         ImGui::TextColored((mSessionActive ? F1::green : F1::red),
                            (mSessionActive ? "Active" : "Inactive")); // From constants.h
-
-        // Packet version (if set)
-        if (mPacketVersion != 0)
-        {
-            ImGui::SameLine();
-            ImGui::Text("(");
-            ImGui::SameLine();
-            ImGui::Text(std::to_string(mPacketVersion).c_str());
-            ImGui::SameLine();
-            ImGui::Text(")");
-        }
 
         ImGui::PopFont();
     }

@@ -10,6 +10,7 @@
 
 namespace F125
 {
+    static constexpr uint8_t sEventStringCodeLen = 4;
 
     union UEventDataDetails
     {
@@ -22,7 +23,14 @@ namespace F125
         struct
         {
             uint8_t vehicleIdx;
+            uint8_t reason; // Result reason - 0 = invalid, 1 = retired, 2 = finished, 3 = terminal damage, 4 = inactive, 5 = not enough laps completed, 6 = black flagged
+                            // 7 = red flagged, 8 = mechanical failure, 9 = session skipped, 10 = session simulated
         } SRetirement;
+
+        struct
+        {
+            uint8_t reason; // 0 = Wet track, 1 = Safety car deployed, 2 = Red flag, 3 = Min lap not reached
+        } DRSDisabled;
 
         struct
         {
@@ -67,7 +75,8 @@ namespace F125
 
         struct
         {
-            uint8_t vehicleIdx;
+            uint8_t vehicleIdx; // Vehicle index of the vehicle serving stop go
+            float stopTime;     // Time spent serving stop go in seconds
         } SStopGoPenaltyServed;
 
         struct
@@ -86,13 +95,25 @@ namespace F125
             uint8_t overtakingVehicleIdx;
             uint8_t beingOvertakenVehicleIdx;
         } SOvertake;
+
+        struct
+        {
+            uint8_t safetyCarType; // 0 = No Safety Car, 1 = Full Safety Car, 2 = Virtual Safety Car, 3 = Formation Lap Safety Car
+            uint8_t eventType;     // 0 = Deployed, 1 = Returning, 2 = Returned, 3 = Resume Race
+        } SSafetyCar;
+
+        struct
+        {
+            uint8_t vehicle1Idx; // Vehicle index of the first vehicle involved in the collision
+            uint8_t vehicle2Idx; // Vehicle index of the second vehicle involved in the collision
+        } SCollision;
     };
 
     struct SPacketEventData
     {
         SPacketHeader header;
 
-        uint8_t eventStringCode[4];
+        uint8_t eventStringCode[sEventStringCodeLen];
         UEventDataDetails eventDetails;
 
         EEventCode getCode(char *buffer)

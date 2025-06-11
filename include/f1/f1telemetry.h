@@ -53,14 +53,13 @@ public:
     virtual void SetFont(ImFont *font) = 0;
     virtual void SessionStarted() = 0;
     virtual void SessionStopped() = 0;
-    virtual void NewPacket(const uint16_t year) = 0;
+    virtual void NewPacket() = 0;
     // TODO: include ip
     virtual void SetSocketInfo(const int port) = 0;
 
 protected:
     bool mSessionActive{false};
     std::string mLastPacketTime{"Never"};
-    uint16_t mPacketVersion{0};
     int mPort{-1};
 
     // Style

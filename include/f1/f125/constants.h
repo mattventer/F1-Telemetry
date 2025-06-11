@@ -6,6 +6,8 @@
 
 namespace F125
 {
+    static constexpr uint8_t sMaxNumCarsInUDPData = 22;
+
     enum EPacketId : uint8_t
     {
         Motion = 0,              // Contains all motion data for player’s car – only sent while player is in control
@@ -25,25 +27,6 @@ namespace F125
         TimeTrial = 14,          // Time Trial specific data
         LapPositions = 15,       // Lap positions on each lap so a chart can be constructed
         Max
-    };
-
-    static const EPacketId sPacketIds[16] = {
-        EPacketId::Motion,
-        EPacketId::Session,
-        EPacketId::LapData,
-        EPacketId::Event,
-        EPacketId::Participants,
-        EPacketId::CarSetups,
-        EPacketId::CarTelemetry,
-        EPacketId::CarStatus,
-        EPacketId::FinalClassification,
-        EPacketId::LobbyInfo,
-        EPacketId::CarDamage,
-        EPacketId::SessionHistory,
-        EPacketId::TyreSets,
-        EPacketId::MotionEx,
-        EPacketId::TimeTrial,
-        EPacketId::LapPositions,
     };
 
     // F1 Modern only
@@ -84,20 +67,25 @@ namespace F125
         P1 = 1,
         P2 = 2,
         P3 = 3,
-        Short = 4,
+        ShortPractice = 4,
         Q1 = 5,
         Q2 = 6,
         Q3 = 7,
         ShortQ = 8,
         OSQ = 9,
-        R = 10,
-        R2 = 11,
-        R3 = 12,
-        TimeTrial = 13
+        SprintShootout1 = 10,
+        SprintShootout2 = 11,
+        SprintShootout3 = 12,
+        ShortSprintShootout = 13,
+        OSSprintShootout = 14,
+        R1 = 15,
+        R2 = 16,
+        R3 = 17,
+        TimeTrial = 18
     };
 
     static const std::map<ESessionType, std::string>
-        sSessionTypeToString = {{ESessionType::Unknown, "Unknown"}, {ESessionType::P1, "P1"}, {ESessionType::P2, "P2"}, {ESessionType::P3, "P3"}, {ESessionType::Short, "Short"}, {ESessionType::Q1, "Q1"}, {ESessionType::Q2, "Q2"}, {ESessionType::Q3, "Q3"}, {ESessionType::ShortQ, "Short Q"}, {ESessionType::OSQ, "OSQ"}, {ESessionType::R, "R"}, {ESessionType::R2, "R2"}, {ESessionType::R3, "R3"}, {ESessionType::TimeTrial, "Time Trial"}};
+        sSessionTypeToString = {{ESessionType::Unknown, "Unknown"}, {ESessionType::P1, "P1"}, {ESessionType::P2, "P2"}, {ESessionType::P3, "P3"}, {ESessionType::ShortPractice, "Short Practice"}, {ESessionType::Q1, "Q1"}, {ESessionType::Q2, "Q2"}, {ESessionType::Q3, "Q3"}, {ESessionType::ShortQ, "Short Q"}, {ESessionType::OSQ, "OSQ"}, {ESessionType::SprintShootout1, "Sprint Shootout 1"}, {ESessionType::SprintShootout2, "Sprint Shootout 2"}, {ESessionType::SprintShootout3, "Sprint Shootout 3"}, {ESessionType::ShortSprintShootout, "Short Sprint Shootout"}, {ESessionType::OSSprintShootout, "One Shot Sprint Shootout"}, {ESessionType::R1, "R1"}, {ESessionType::R2, "R2"}, {ESessionType::R3, "R3"}, {ESessionType::TimeTrial, "Time Trial"}};
 
     enum EEventCode : uint8_t
     {
@@ -119,24 +107,24 @@ namespace F125
         Flashback = 15,
         ButtonStatus = 16,
         RedFlag = 17,
-        Overtake = 18
+        Overtake = 18,
+        SafteyCar = 19,
+        Collision = 20
     };
 
     static std::map<std::string, EEventCode>
-        sEventCodes = {{"SSTA", EEventCode::SessionStarted}, {"SEND", EEventCode::SessionEnded}, {"FTLP", EEventCode::FastestLap}, {"RTMT", EEventCode::Retirement}, {"DRSE", EEventCode::DRSEnabled}, {"DRSD", EEventCode::DRSDisabled}, {"TMPT", EEventCode::TeammateInPits}, {"CHQF", EEventCode::ChequeredFlag}, {"RCWN", EEventCode::RaceWinner}, {"PENA", EEventCode::PenaltyIssued}, {"SPTP", EEventCode::SpeedTrapTriggered}, {"STLG", EEventCode::StartLights}, {"LGOT", EEventCode::LightsOut}, {"DTSV", EEventCode::DriveThroughServed}, {"SGSV", EEventCode::StopGoServed}, {"FLBK", EEventCode::Flashback}, {"BUTN", EEventCode::ButtonStatus}, {"RDFL", EEventCode::RedFlag}, {"OVTK", EEventCode::Overtake}};
+        sEventCodes = {{"SSTA", EEventCode::SessionStarted}, {"SEND", EEventCode::SessionEnded}, {"FTLP", EEventCode::FastestLap}, {"RTMT", EEventCode::Retirement}, {"DRSE", EEventCode::DRSEnabled}, {"DRSD", EEventCode::DRSDisabled}, {"TMPT", EEventCode::TeammateInPits}, {"CHQF", EEventCode::ChequeredFlag}, {"RCWN", EEventCode::RaceWinner}, {"PENA", EEventCode::PenaltyIssued}, {"SPTP", EEventCode::SpeedTrapTriggered}, {"STLG", EEventCode::StartLights}, {"LGOT", EEventCode::LightsOut}, {"DTSV", EEventCode::DriveThroughServed}, {"SGSV", EEventCode::StopGoServed}, {"FLBK", EEventCode::Flashback}, {"BUTN", EEventCode::ButtonStatus}, {"RDFL", EEventCode::RedFlag}, {"OVTK", EEventCode::Overtake}, {"SCAR", EEventCode::SafteyCar}, {"COLL", EEventCode::Collision}};
 
     enum ETrackId : int8_t
     {
         Unknown = -1,
         Melbourne = 0,
-        PaulRicard = 1,
         Shanghai = 2,
         SakhirBahrain = 3,
         Catalunya = 4,
         Monaco = 5,
         Montreal = 6,
         Silverstone = 7,
-        Hockenheim = 8,
         Hungaroring = 9,
         Spa = 10,
         Monza = 11,
@@ -149,22 +137,19 @@ namespace F125
         Sochi = 18,
         Mexico = 19,
         BakuAzerbaijan = 20,
-        SakhirShort = 21,
-        SilverstoneShort = 22,
-        TexasShort = 23,
-        SuzukaShort = 24,
-        Hanoi = 25,
         Zandvoort = 26,
         Imola = 27,
-        Portimao = 28,
         Jeddah = 29,
         Miami = 30,
         LasVegas = 31,
-        Losail = 32
+        Losail = 32,
+        SilverstonRev = 39,
+        AustriaRev = 40,
+        ZandvoortRev = 41
     };
 
     static const std::map<ETrackId, std::string>
-        sTrackIdToString = {{ETrackId::Melbourne, "Melbourne"}, {ETrackId::PaulRicard, "Paul Ricard"}, {ETrackId::Shanghai, "Shanghai"}, {ETrackId::SakhirBahrain, "Sakhir (Bahrain)"}, {ETrackId::Catalunya, "Catalunya"}, {ETrackId::Monaco, "Monaco"}, {ETrackId::Montreal, "Montreal"}, {ETrackId::Silverstone, "Silverstone"}, {ETrackId::Hockenheim, "Hockenheim"}, {ETrackId::Hungaroring, "Hungaroring"}, {ETrackId::Spa, "Spa"}, {ETrackId::Monza, "Monza"}, {ETrackId::Singapore, "Singapore"}, {ETrackId::Suzuka, "Suzuka"}, {ETrackId::AbuDhabi, "Abu Dhabi"}, {ETrackId::Texas, "Texas"}, {ETrackId::Brazil, "Brazil"}, {ETrackId::Austria, "Austria"}, {ETrackId::Sochi, "Sochi"}, {ETrackId::Mexico, "Mexico"}, {ETrackId::BakuAzerbaijan, "Baku (Azerbaijan)"}, {ETrackId::SakhirShort, "Sakhir Short"}, {ETrackId::SilverstoneShort, "Silverstone Short"}, {ETrackId::TexasShort, "Texas Short"}, {ETrackId::SuzukaShort, "SuzukaShort"}, {ETrackId::Hanoi, "Hanoi"}, {ETrackId::Zandvoort, "Zandvoort"}, {ETrackId::Imola, "Imola"}, {ETrackId::Portimao, "Portimao"}, {ETrackId::Jeddah, "Jeddah"}, {ETrackId::Miami, "Miami"}, {ETrackId::LasVegas, "Las Vegas"}, {ETrackId::Losail, "Losail"}, {ETrackId::Unknown, "Unknown"}};
+        sTrackIdToString = {{ETrackId::Melbourne, "Melbourne"}, {ETrackId::Shanghai, "Shanghai"}, {ETrackId::SakhirBahrain, "Sakhir (Bahrain)"}, {ETrackId::Catalunya, "Catalunya"}, {ETrackId::Monaco, "Monaco"}, {ETrackId::Montreal, "Montreal"}, {ETrackId::Silverstone, "Silverstone"}, {ETrackId::Hungaroring, "Hungaroring"}, {ETrackId::Spa, "Spa"}, {ETrackId::Monza, "Monza"}, {ETrackId::Singapore, "Singapore"}, {ETrackId::Suzuka, "Suzuka"}, {ETrackId::AbuDhabi, "Abu Dhabi"}, {ETrackId::Texas, "Texas"}, {ETrackId::Brazil, "Brazil"}, {ETrackId::Austria, "Austria"}, {ETrackId::Sochi, "Sochi"}, {ETrackId::Mexico, "Mexico"}, {ETrackId::BakuAzerbaijan, "Baku (Azerbaijan)"}, {ETrackId::Zandvoort, "Zandvoort"}, {ETrackId::Imola, "Imola"}, {ETrackId::Jeddah, "Jeddah"}, {ETrackId::Miami, "Miami"}, {ETrackId::LasVegas, "Las Vegas"}, {ETrackId::Losail, "Losail"}, {ETrackId::SilverstonRev, "SilverstonRev"}, {ETrackId::AustriaRev, "AustriaRev"}, {ETrackId::ZandvoortRev, "ZandvoortRev"}, {ETrackId::Unknown, "Unknown"}};
 
     static const char *const sTeams[] = {"Mercedes", "Ferrari", "Red Bull Racing", "Williams", "Racing Point", "Renault", "Alpha-Tauri", "Haas", "McLaren", "Alfa Romeo", "McLaren 1988", "McLaren 1991", "Williams 1992", "Ferrari 1995", "Williams 1996", "McLaren 1998", "Ferrari 2002", "Ferrari 2004", "Renault 2006", "Ferrari 2007", "McLaren 2008", "Red Bull 2010", "Ferrari 1976", "Art Grand Prix", "Campos Vexatec Racing", "Carlin", "Charouz Racing System", "Dams", "Russian Time", "MP Motorsport", "Pertamina", "McLaren 1990", "Trident", "BWT Arden", "McLaren 1976", "Lotus 1972", "Ferrari 1979", "McLaren 1982", "Williams 2003", "Brawn 2009", "Lotus 1978", "F1 Generic Car", "Art GP 19", "Campos 19", "Carlin 19", "Sauber Junior Charouz 19", "Dams 19", "Uni VIRTUOSI 19", "MP Motorsport 19", "Premia 19", "Trident 19", "Arden 19", "NULL", "Benetton 1994", "Benetton 1995", "Ferrari 2000", "Jordan 1991", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "NULL", "My Team"};
     static const char *const Drivers[] = {"Carlos Sainz",

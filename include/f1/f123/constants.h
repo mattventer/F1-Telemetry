@@ -27,25 +27,6 @@ namespace F123
         Max
     };
 
-    static const EPacketId sPacketIds[16] = {
-        EPacketId::Motion,
-        EPacketId::Session,
-        EPacketId::LapData,
-        EPacketId::Event,
-        EPacketId::Participants,
-        EPacketId::CarSetups,
-        EPacketId::CarTelemetry,
-        EPacketId::CarStatus,
-        EPacketId::FinalClassification,
-        EPacketId::LobbyInfo,
-        EPacketId::CarDamage,
-        EPacketId::SessionHistory,
-        EPacketId::TyreSets,
-        EPacketId::MotionEx,
-        EPacketId::TimeTrial,
-        EPacketId::LapPositions,
-    };
-
     // F1 Modern only
     enum class EActualTyreCompound : uint8_t
     {

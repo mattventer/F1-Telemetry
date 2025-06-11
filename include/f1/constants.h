@@ -8,6 +8,12 @@
 
 namespace F1
 {
+    enum class Version
+    {
+        F123,
+        F125
+    };
+
     constexpr int sMinY = 0;
     constexpr int sMinX = 0;
     constexpr int sMaxY = 100;

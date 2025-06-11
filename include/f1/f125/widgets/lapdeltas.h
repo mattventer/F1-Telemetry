@@ -143,6 +143,7 @@ private:
         deltaBehindSec = deltaBehindMs / 1000.0f;
 
         // Convert to seconds
+        // TODO: Getting some outliers when passing or getting passed
         mDeltaLeader[mDataCount] = deltaLeaderSec;
         mDeltaFront[mDataCount] = deltaFrontSec;
         mDeltaBehind[mDataCount] = deltaBehindSec;

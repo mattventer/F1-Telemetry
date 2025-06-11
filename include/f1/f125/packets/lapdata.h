@@ -16,8 +16,10 @@ namespace F125
               uint8_t sector1TimeMinutes;
               uint16_t sector2TimeInMS;
               uint8_t sector2TimeMinutes;
-              uint16_t deltaToCarInFrontInMS;
-              uint16_t deltaToRaceLeaderInMS;
+              uint16_t deltaToCarInFrontMSPart;     // Time delta to car in front milliseconds part
+              uint8_t deltaToCarInFrontMinutesPart; // Time delta to car in front whole minute part
+              uint16_t deltaToRaceLeaderMSPart;     // Time delta to race leader milliseconds part
+              uint8_t deltaToRaceLeaderMinutesPart; // Time delta to race leader whole minute part
               float lapDistance;
               float totalDistance;
               float safetyCarDelta;
@@ -39,6 +41,8 @@ namespace F125
               uint16_t pitLaneTimeInLaneInMS;
               uint16_t pitStopTimerInMS;
               uint8_t pitStopShouldServePen;
+              float speedTrapFastestSpeed; // Fastest speed through speed trap for this car in kmph
+              uint8_t speedTrapFastestLap; // Lap no the fastest speed was achieved, 255 = not set
 
               unsigned long get(char *buffer, unsigned long offset)
               {
@@ -66,13 +70,21 @@ namespace F125
                             sizeof(this->sector2TimeMinutes));
                      offset += sizeof(this->sector2TimeMinutes);
 
-                     memcpy(&this->deltaToCarInFrontInMS, &buffer[offset],
-                            sizeof(this->deltaToCarInFrontInMS));
-                     offset += sizeof(this->deltaToCarInFrontInMS);
+                     memcpy(&this->deltaToCarInFrontMSPart, &buffer[offset],
+                            sizeof(this->deltaToCarInFrontMSPart));
+                     offset += sizeof(this->deltaToCarInFrontMSPart);
 
-                     memcpy(&this->deltaToRaceLeaderInMS, &buffer[offset],
-                            sizeof(this->deltaToRaceLeaderInMS));
-                     offset += sizeof(this->deltaToRaceLeaderInMS);
+                     memcpy(&this->deltaToCarInFrontMinutesPart, &buffer[offset],
+                            sizeof(this->deltaToCarInFrontMinutesPart));
+                     offset += sizeof(this->deltaToCarInFrontMinutesPart);
+
+                     memcpy(&this->deltaToRaceLeaderMSPart, &buffer[offset],
+                            sizeof(this->deltaToRaceLeaderMSPart));
+                     offset += sizeof(this->deltaToRaceLeaderMSPart);
+
+                     memcpy(&this->deltaToRaceLeaderMinutesPart, &buffer[offset],
+                            sizeof(this->deltaToRaceLeaderMinutesPart));
+                     offset += sizeof(this->deltaToRaceLeaderMinutesPart);
 
                      memcpy(&this->lapDistance, &buffer[offset],
                             sizeof(this->lapDistance));
@@ -158,6 +170,14 @@ namespace F125
                             sizeof(this->pitStopShouldServePen));
                      offset += sizeof(this->pitStopShouldServePen);
 
+                     memcpy(&this->speedTrapFastestSpeed, &buffer[offset],
+                            sizeof(this->speedTrapFastestSpeed));
+                     offset += sizeof(this->speedTrapFastestSpeed);
+
+                     memcpy(&this->speedTrapFastestLap, &buffer[offset],
+                            sizeof(this->speedTrapFastestLap));
+                     offset += sizeof(this->speedTrapFastestLap);
+
                      return offset;
               }
        };
@@ -165,15 +185,25 @@ namespace F125
        struct SPacketLapData
        {
               SPacketHeader header; // Header
-              SLapData lapData[22];
+              SLapData lapData[sMaxNumCarsInUDPData];
+              uint8_t timeTrialPBCarIdx;    // Index of Personal Best car in time trial (255 if invalid)
+              uint8_t timeTrialRivalCarIdx; // Index of Rival car in time trial (255 if invalid)
 
               unsigned long get(char *buffer)
               {
                      unsigned long offset = this->header.get(buffer);
-                     for (int i = 0; i < 22; i++)
+                     for (int i = 0; i < sMaxNumCarsInUDPData; i++)
                      {
                             offset = this->lapData[i].get(buffer, offset);
                      }
+
+                     memcpy(&this->timeTrialPBCarIdx, &buffer[offset],
+                            sizeof(this->timeTrialPBCarIdx));
+                     offset += sizeof(this->timeTrialPBCarIdx);
+
+                     memcpy(&this->timeTrialRivalCarIdx, &buffer[offset],
+                            sizeof(this->timeTrialRivalCarIdx));
+                     offset += sizeof(this->timeTrialRivalCarIdx);
 
                      return offset;
               }

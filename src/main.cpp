@@ -185,6 +185,7 @@ int main()
     // Initialize common objects
     sSessionHistory = std::make_shared<CSessionHistory>();
 
+    // TODO: Create at runtime based on packet version
     // Initialize F123 graphs
     sSessionInfo23 = std::make_shared<CSessionInfo23>();
     sCarDamageGraph23 = std::make_shared<CCarDamageGraph23>();
@@ -212,7 +213,7 @@ int main()
     rsrcs23.lapInfoHeader = sLapInfoHeader23;
     sF123Telemetry = std::make_unique<CF123Telemetry>(rsrcs23);
 
-    // Initialize F123 handlers
+    // Initialize F125 handlers
     SF1TelemetryResources rsrcs25;
     rsrcs25.sessionInfo = sSessionInfo25;
     rsrcs25.sessionHistory = sSessionHistory;
@@ -221,7 +222,7 @@ int main()
     rsrcs25.carDamageGraph = sCarDamageGraph25;
     rsrcs25.lapDeltas = sLapDeltas25;
     rsrcs25.lapInfoHeader = sLapInfoHeader25;
-    sF125Telemetry = std::make_unique<CF125Telemetry>(rsrcs23);
+    sF125Telemetry = std::make_unique<CF125Telemetry>(rsrcs25);
 
     // Initialize windows
     sDashboard23 = std::make_shared<CDashboard>(sTyreWearGraph23, sTyreTemps23, sCarDamageGraph23, sLapDeltas23, sLapInfoHeader23);

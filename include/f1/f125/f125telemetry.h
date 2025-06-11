@@ -26,7 +26,7 @@ public:
 
     void ParsePacket(char *packet, const SPacketHeader &header)
     {
-        SPDLOG_TRACE("CF125Telemetry::ParsePacket()");
+        SPDLOG_TRACE("CF125Telemetry::ParsePacket() id:{}", header.packetId);
 
         if (header.packetFormat != mYear)
         {
@@ -34,12 +34,18 @@ public:
             return;
         }
 
-        mSessionInfo->NewPacket(header.packetFormat);
+        mSessionInfo->NewPacket();
 
-        // Parse based on packet id
-        const F125::EPacketId id = F125::sPacketIds[header.packetId];
+        // Invalid
+        if (header.packetId > F125::EPacketId::Max)
+        {
+            return;
+        }
+
+        const auto id = F125::EPacketId(header.packetId);
         const int playerIdx = header.playerCarIndex;
 
+        // Parse based on packet id
         switch (id)
         {
         case F125::EPacketId::Participants:
@@ -115,10 +121,10 @@ public:
             const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
             F125::SLapData carBehindLapData = {0};
 
-            // Make sure we are in a race
-            if (myRacePosition < 21)
+            // Make sure we are in a race and there is a car behind us
+            if (myRacePosition < (F125::sMaxNumCarsInUDPData - 1))
             {
-                for (int i = 0; i < 22; ++i)
+                for (int i = 0; i < F125::sMaxNumCarsInUDPData; ++i)
                 {
                     // Car behind lap data
                     if (lapData.lapData[i].carPosition == myRacePosition + 1)
@@ -132,13 +138,13 @@ public:
             // Extract lap data
             SLapDeltasData playerDeltas, carBehindDeltas;
             playerDeltas.carPosition = lapData.lapData[playerIdx].carPosition;
-            playerDeltas.deltaToCarInFrontInMS = lapData.lapData[playerIdx].deltaToCarInFrontInMS;
-            playerDeltas.deltaToRaceLeaderInMS = lapData.lapData[playerIdx].deltaToRaceLeaderInMS;
+            playerDeltas.deltaToCarInFrontInMS = (lapData.lapData[playerIdx].deltaToCarInFrontMinutesPart * 1000) + lapData.lapData[playerIdx].deltaToCarInFrontMSPart;
+            playerDeltas.deltaToRaceLeaderInMS = (lapData.lapData[playerIdx].deltaToRaceLeaderMinutesPart * 1000) + lapData.lapData[playerIdx].deltaToRaceLeaderMSPart;
             playerDeltas.currentLapTimeInMS = lapData.lapData[playerIdx].currentLapTimeInMS;
 
             carBehindDeltas.carPosition = carBehindLapData.carPosition;
-            carBehindDeltas.deltaToCarInFrontInMS = carBehindLapData.deltaToCarInFrontInMS;
-            carBehindDeltas.deltaToRaceLeaderInMS = carBehindLapData.deltaToRaceLeaderInMS;
+            carBehindDeltas.deltaToCarInFrontInMS = (carBehindLapData.deltaToCarInFrontMinutesPart * 1000) + carBehindLapData.deltaToCarInFrontMSPart;
+            carBehindDeltas.deltaToRaceLeaderInMS = (carBehindLapData.deltaToCarInFrontMinutesPart * 1000) + carBehindLapData.deltaToRaceLeaderMSPart;
             carBehindDeltas.currentLapTimeInMS = carBehindLapData.currentLapTimeInMS;
 
             mSessionInfo->SessionStarted();
