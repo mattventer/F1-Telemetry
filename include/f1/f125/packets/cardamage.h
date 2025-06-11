@@ -18,6 +18,7 @@ namespace F125
               float tyresWear[4];           // Tyre wear (percentage)
               uint8_t tyresDamage[4];       // Tyre damage (percentage)
               uint8_t brakesDamage[4];      // Brakes damage (percentage)
+              uint8_t tyreBlisters[4];      // Tyre blisters value (percentage)
               uint8_t frontLeftWingDamage;  // Front left wing damage (percentage)
               uint8_t frontRightWingDamage; // Front right wing damage (percentage)
               uint8_t rearWingDamage;       // Rear wing damage (percentage)
@@ -56,6 +57,12 @@ namespace F125
                             memcpy(&this->brakesDamage[i], &buffer[offset],
                                    sizeof(this->brakesDamage[i]));
                             offset += sizeof(this->brakesDamage[i]);
+                     }
+                     for (int i = 0; i < 4; i++)
+                     {
+                            memcpy(&this->tyreBlisters[i], &buffer[offset],
+                                   sizeof(this->tyreBlisters[i]));
+                            offset += sizeof(this->tyreBlisters[i]);
                      }
                      memcpy(&this->frontLeftWingDamage, &buffer[offset],
                             sizeof(this->frontLeftWingDamage));
