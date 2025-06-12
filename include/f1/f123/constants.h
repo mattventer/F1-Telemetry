@@ -20,22 +20,12 @@ namespace F123
         LobbyInfo = 9,           // Information about players in a multiplayer lobby
         CarDamage = 10,          // Damage status for all cars
         SessionHistory = 11,     // Lap and tyre data for session
-        Invalid = 12
+        TyreSets = 12,           // Extended tyre set data
+        MotionEx = 13,           // Extended motion data for player car
+        TimeTrial = 14,          // Time Trial specific data
+        LapPositions = 15,       // Lap positions on each lap so a chart can be constructed
+        Max
     };
-
-    static const EPacketId sPacketIds[12] = {
-        EPacketId::Motion,
-        EPacketId::Session,
-        EPacketId::LapData,
-        EPacketId::Event,
-        EPacketId::Participants,
-        EPacketId::CarSetups,
-        EPacketId::CarTelemetry,
-        EPacketId::CarStatus,
-        EPacketId::FinalClassification,
-        EPacketId::LobbyInfo,
-        EPacketId::CarDamage,
-        EPacketId::SessionHistory};
 
     // F1 Modern only
     enum class EActualTyreCompound : uint8_t
@@ -67,7 +57,7 @@ namespace F123
     static const std::map<EVisualTyreCompound, std::string> sVisualTyreCompoundToString = {{EVisualTyreCompound::Inter, "Inter"}, {EVisualTyreCompound::Wet, "Wet"}, {EVisualTyreCompound::Soft, "Soft"}, {EVisualTyreCompound::Medium, "Medium"}, {EVisualTyreCompound::Hard, "Hard"}, {EVisualTyreCompound::Unknown, "Unknown"}};
 
     static const std::map<EPacketId, std::string>
-        sPacketIdToString = {{EPacketId::Motion, "Motion"}, {EPacketId::Session, "Session"}, {EPacketId::LapData, "LapData"}, {EPacketId::Event, "Event"}, {EPacketId::Participants, "Participants"}, {EPacketId::CarSetups, "CarSetups"}, {EPacketId::CarTelemetry, "CarTelemetry"}, {EPacketId::CarStatus, "CarStatus"}, {EPacketId::FinalClassification, "FinalClassification"}, {EPacketId::LobbyInfo, "LobbyInfo"}, {EPacketId::CarDamage, "CarDamage"}, {EPacketId::SessionHistory, "SessionHistory"}};
+        sPacketIdToString = {{EPacketId::Motion, "Motion"}, {EPacketId::Session, "Session"}, {EPacketId::LapData, "LapData"}, {EPacketId::Event, "Event"}, {EPacketId::Participants, "Participants"}, {EPacketId::CarSetups, "CarSetups"}, {EPacketId::CarTelemetry, "CarTelemetry"}, {EPacketId::CarStatus, "CarStatus"}, {EPacketId::FinalClassification, "FinalClassification"}, {EPacketId::LobbyInfo, "LobbyInfo"}, {EPacketId::CarDamage, "CarDamage"}, {EPacketId::SessionHistory, "SessionHistory"}, {EPacketId::TyreSets, "TyreSets"}, {EPacketId::MotionEx, "MotionEx"}, {EPacketId::TimeTrial, "TimeTrial"}, {EPacketId::LapPositions, "LapPositions"}};
 
     enum class ESessionType : uint8_t
     {

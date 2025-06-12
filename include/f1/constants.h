@@ -1,12 +1,19 @@
 #pragma once
 
 #include "imgui.h"
-#include "f123constants.h"
+#include "implot.h"
+#include "f123/constants.h"
 
 #include <cstdint>
 
-namespace
+namespace F1
 {
+    enum class Version
+    {
+        F123,
+        F125
+    };
+
     constexpr int sMinY = 0;
     constexpr int sMinX = 0;
     constexpr int sMaxY = 100;

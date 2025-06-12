@@ -3,9 +3,10 @@
 #include "imgui.h"
 #include "implot.h"
 
+#include "f1telemetry.h"
 #include "constants.h"
-#include "f123constants.h"
-#include "packets/lapdata.h"
+#include "f123/constants.h"
+#include "f123/packets/lapdata.h"
 #include "spdlog/spdlog.h"
 
 #include <array>
@@ -15,19 +16,12 @@
 #include <string>
 #include <vector>
 
-using namespace F123;
-
-namespace
-{
-    constexpr int sMaxDataCount = 10000;
-}
-
-class CLapDeltas
+class CLapDeltas23 : public ILapDeltas
 {
 public:
-    CLapDeltas()
+    CLapDeltas23()
     {
-        SPDLOG_TRACE("CLapDeltas()");
+        SPDLOG_TRACE("CLapDeltas23()");
 
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_AutoFit;
@@ -81,12 +75,12 @@ public:
         // mRaces.push_back(dummyRace2);
     }
 
-    void SetLapData(const SLapData &myLapData, const SLapData &carBehindLapData)
+    void SetLapData(const SLapDeltasData &myLapData, const SLapDeltasData &carBehindLapData) override
     {
         SetDeltaData(myLapData, carBehindLapData);
     }
 
-    void ResetLapData()
+    void ResetLapData() override
     {
         mDataCount = 0;
         mMaxDelta = 0.01f;
@@ -97,37 +91,7 @@ public:
         memset(mDeltaBehind, 0.0f, sizeof(mDeltaLeader));
     }
 
-    // void ShowDeltas(const ImVec2 spaceAvail) const
-    // {
-    //     if (mPlayerPosition > 1)
-    //     {
-    //         if (ImPlot::BeginPlot("Delta to leader", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
-    //         {
-    //             // Configure
-    //             ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
-    //             ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
-    //             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
-    //             ImPlot::SetNextLineStyle(red, 3);
-    //             ImPlot::PlotLine("Delta Leader (s)", mXaxis, mDeltaLeader, mDataCount);
-    //             ImPlot::EndPlot();
-    //         }
-    //     }
-    //     else
-    //     {
-    //         if (ImPlot::BeginPlot("Delta to car behind", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
-    //         {
-    //             // Configure
-    //             ImPlot::SetupAxisLimits(ImAxis_Y1, mMinDelta == FLT_MAX ? 0.0f : mMinDelta / 2.0f, mMaxDelta * 1.50f, ImPlotCond_Always);
-    //             ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
-    //             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
-    //             ImPlot::SetNextLineStyle(green, 3);
-    //             ImPlot::PlotLine("Delta Car behind (s)", mXaxis, mDeltaBehind, mDataCount, (ImPlotLineFlags_SkipNaN));
-    //             ImPlot::EndPlot();
-    //         }
-    //     }
-    // }
-
-    void ShowDeltas(const ImVec2 spaceAvail) const
+    void ShowDeltas(const ImVec2 spaceAvail) const override
     {
         if (ImPlot::BeginPlot("Deltas (s)", ImVec2((spaceAvail.x / 2), (spaceAvail.y / 2))))
         {
@@ -135,36 +99,18 @@ public:
             ImPlot::SetupAxisLimits(ImAxis_Y1, ((mMinDelta == FLT_MAX) ? 0.0f : mMinDelta / 2.0f), (mMaxDelta * 1.50f), ImPlotCond_Always);
             ImPlot::SetupAxis(ImAxis_Y1, "Seconds", mAxisFlagsY);
             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
-            ImPlot::SetNextLineStyle(yellow, 3);
+            ImPlot::SetNextLineStyle(F1::yellow, 3);
             ImPlot::PlotLine("Leader", mXaxis, mDeltaLeader, mDataCount);
-            ImPlot::SetNextLineStyle(red, 3);
+            ImPlot::SetNextLineStyle(F1::red, 3);
             ImPlot::PlotLine("Ahead", mXaxis, mDeltaFront, mDataCount);
-            ImPlot::SetNextLineStyle(green, 3);
+            ImPlot::SetNextLineStyle(F1::green, 3);
             ImPlot::PlotLine("Behind", mXaxis, mDeltaBehind, mDataCount);
             ImPlot::EndPlot();
         }
     }
 
 private:
-    ImPlotAxisFlags mAxisFlagsX{0};
-    ImPlotAxisFlags mAxisFlagsY{0};
-    // Deltas
-    uint8_t mPlayerPosition{1};
-    uint32_t mCurrentLapTimeInMS{0};
-
-    // Deltas (sec)
-    // float mDeltas[sMaxDataCount]{};
-    float mDeltaLeader[sMaxDataCount]{0}; // Delta to race leader
-    float mDeltaFront[sMaxDataCount]{0};  // Delta to car ahead of player
-    float mDeltaBehind[sMaxDataCount]{0}; // Delta to car behin player
-
-    float mXaxis[sMaxDataCount]{};
-    int mDataCount{0};
-
-    float mMaxDelta{0.01f};
-    float mMinDelta{FLT_MAX};
-
-    void SetDeltaData(const SLapData &myLapData, const SLapData &carBehindLapData)
+    void SetDeltaData(const SLapDeltasData &myLapData, const SLapDeltasData &carBehindLapData)
     {
         uint16_t deltaLeaderMS = 0, deltaFrontMs = 0, deltaBehindMs = 0;
         float deltaLeaderSec = 0, deltaFrontSec = 0, deltaBehindSec = 0;
@@ -172,13 +118,8 @@ private:
         const auto playerPosition = myLapData.carPosition;
         const auto playerLapTime = myLapData.currentLapTimeInMS;
 
-        // Took or lost leader position, new lap, max data reached
-        // if ((playerPosition == 1 && mPlayerPosition > 1) || (mPlayerPosition == 1 && playerPosition > 1) || (mDataCount >= sMaxDataCount) || (playerLapTime < mCurrentLapTimeInMS))
-        // {
-        //     ResetLapData();
-        // }
         // New lap, or max data reached
-        if ((mDataCount >= sMaxDataCount) || (playerLapTime < mCurrentLapTimeInMS))
+        if ((mDataCount >= mMaxDataCount) || (playerLapTime < mCurrentLapTimeInMS))
         {
             ResetLapData();
         }
@@ -198,12 +139,6 @@ private:
         deltaLeaderSec = deltaLeaderMS / 1000.0f;
         deltaFrontSec = deltaFrontMs / 1000.0f;
         deltaBehindSec = deltaBehindMs / 1000.0f;
-
-        // Outlier when car behind gets overtaken
-        // if (deltaMS == 0.0f || (mDataCount != 0 && deltaSecs > 5.0f && ((deltaSecs > (mDeltas[mDataCount - 1] * 2.5f)))))
-        // {
-        //     return;
-        // }
 
         // Convert to seconds
         mDeltaLeader[mDataCount] = deltaLeaderSec;

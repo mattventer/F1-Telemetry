@@ -4,8 +4,11 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "f123constants.h"
-#include "packets/sessionhistory.h"
+#include "f123/constants.h"
+#include "f125/constants.h"
+#include "f1telemetry.h"
+
+#include "f123/packets/sessionhistory.h"
 #include "spdlog/spdlog.h"
 #include "storage/data.h"
 #include "storage/sessionstorage.h"
@@ -18,7 +21,6 @@
 #include <tuple>
 #include <vector>
 
-using namespace F123;
 using namespace SessionStorage;
 
 namespace
@@ -52,7 +54,7 @@ public:
             SPDLOG_DEBUG("Loaded {} races", mRacesLoaded);
         }
 
-        // // For testing
+        // // For testing (hmm...maybe actually write some actual testcases)
         // SRaceWeekend dummyRace1;
         // dummyRace1.trackName = "TrackName1";
         // dummyRace1.date = "dummy date1";
@@ -112,8 +114,6 @@ public:
 
     void StoreSessionHistory()
     {
-        SPDLOG_TRACE("StoreSessionHistory() entry");
-
         // Only want to store new races
         int nRaces = mRaces.size() - mRacesLoaded;
 
@@ -129,18 +129,14 @@ public:
 
             if (!mStorage.StoreRaceData(mRaces, nRaces))
             {
-                SPDLOG_ERROR("Store failed!");
+                SPDLOG_ERROR("Store race data failed!");
             }
-        }
-        else
-        {
-            SPDLOG_DEBUG("No new races to store");
         }
     }
 
-    void SetSessionHistoryData(const SPacketSessionHistoryData &mySessionData)
+    // TODO: Change to generic struct - not packet specific to F1 version
+    void SetSessionHistoryData(const F123::SPacketSessionHistoryData &mySessionData)
     {
-        SPDLOG_TRACE("SetSessionHistoryData() entry");
         // Don't care
         if ((mySessionData.numLaps == 0) || (mySessionData.header.sessionUid == 0))
         {
@@ -153,24 +149,17 @@ public:
         auto sessionIdx = std::get<1>(location);
         SPDLOG_TRACE("New session data: uid {}, raceIdx {}, sessionIdx {}", mySessionData.header.sessionUid, raceIdx, sessionIdx);
 
-        // Session doesn't exist, create a new one
+        // Session doesn't exist
+        // TODO: Seems I wrote this this expecting the session to already exist? Could just create it here...
         if (sessionIdx < 0)
         {
-            SPDLOG_ERROR("Session UID {} doesn't exist but got SPacketSessionHistoryData for it", mySessionData.header.sessionUid);
-            return;
-        }
-
-        // No lap data yet
-        if (mySessionData.numLaps == 0)
-        {
-            SPDLOG_TRACE("Lap #{}, ignoring", mySessionData.numLaps);
+            SPDLOG_ERROR("Session UID {} doesn't exist but you are trying to store it.", mySessionData.header.sessionUid);
             return;
         }
 
         uint8_t lapNum = mySessionData.numLaps;                                  // Incoming lap info
         auto currLapIdx = lapNum - 1;                                            // Index this lap relates to
         int lapsStored = mRaces.at(raceIdx).sessions.at(sessionIdx).laps.size(); // How many laps have we stored already?
-        SPDLOG_TRACE("Got lap #{}. Last lap received #{}", lapNum, lapsStored);
 
         // Need to add a new lap
         if (lapNum > lapsStored)
@@ -190,13 +179,11 @@ public:
                 if ((lap.sector1MS + lap.sector1MS + lap.sector1MS) > 0)
                 {
                     mRaces.at(raceIdx).sessions.at(sessionIdx).laps.push_back(lap);
-                    SPDLOG_TRACE("Pushed new lap {} on track {}", lap.lapNumber, mRaces.at(raceIdx).trackName);
                 }
 
                 // Sector 3 + Total lap time for last lap
                 if (i > 0 && lapNum == lapsStored + 1)
                 {
-                    SPDLOG_TRACE("Sector 3 + Total lap time for last lap");
                     mRaces.at(raceIdx).sessions.at(sessionIdx).laps.at(i - 1).sector3MS = mySessionData.lapHistoryData[i - 1].sector3TimeInMS;
                     mRaces.at(raceIdx).sessions.at(sessionIdx).laps.at(i - 1).totalLapTime = mySessionData.lapHistoryData[i - 1].lapTimeInMS;
                 }
@@ -217,11 +204,6 @@ public:
             {
                 mRaces[raceIdx].sessions[sessionIdx].laps[currLapIdx] = lap;
             }
-            else
-            {
-                // TODO: remove
-                SPDLOG_TRACE("Lap #{} data but all 0's", lapNum);
-            }
         }
 
         // Update fastest times
@@ -231,18 +213,19 @@ public:
         mRaces.at(raceIdx).sessions.at(sessionIdx).fastestSec3LapNum = mySessionData.bestSector3LapNum;
     }
 
-    void StartSession(const uint64_t uid, const ETrackId trackId, const ESessionType sessionType)
+    // TODO: Make more generic for both 23/25 callers
+    void StartSession(const uint64_t uid, const F123::ETrackId trackId, const F123::ESessionType sessionType)
     {
         SPDLOG_INFO("Starting session: {}", uid);
         mActiveSessionUid = uid;
 
-        if (sSessionTypeToString.find(sessionType) == sSessionTypeToString.end())
+        if (F123::sSessionTypeToString.find(sessionType) == F123::sSessionTypeToString.end())
         {
             SPDLOG_WARN("Could not find session type {}", (uint8_t)sessionType);
         }
 
         mRecord = true;
-        auto trackName = sTrackIdToString.at(trackId);
+        auto trackName = F123::sTrackIdToString.at(trackId);
 
         SPDLOG_DEBUG("Track {}", trackName);
 
@@ -375,13 +358,13 @@ public:
 
                         // TODO: Getting session type 15 which does not exist? Maybe when race is quit then resumed?
                         std::string sessionTypeStr;
-                        if (sSessionTypeToString.find(session->sessionType) == sSessionTypeToString.end())
+                        if (F123::sSessionTypeToString.find(session->sessionType) == F123::sSessionTypeToString.end())
                         {
                             sessionTypeStr = std::to_string((uint8_t)session->sessionType);
                         }
                         else
                         {
-                            sessionTypeStr = sSessionTypeToString.at(session->sessionType);
+                            sessionTypeStr = F123::sSessionTypeToString.at(session->sessionType);
                         }
 
                         const std::string sessionHeaderStr = sessionTypeStr + " [" + std::to_string(session->uid) + "]";
@@ -402,28 +385,28 @@ public:
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec1LapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 ImGui::Text("%.3f", lap->sector1MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec2LapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 ImGui::Text("%.3f", lap->sector2MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestSec3LapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 ImGui::Text("%.3f", lap->sector3MS / sMsPerSec);
 
                                 ImGui::TableNextColumn();
                                 if (lap->lapNumber == session->fastestLapNum)
                                 {
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(green));
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(F1::green));
                                 }
                                 auto seconds = lap->totalLapTime / sMsPerSec;
                                 int min = seconds / sSecPerMin;

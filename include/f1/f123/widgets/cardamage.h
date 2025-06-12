@@ -4,18 +4,18 @@
 #include "implot.h"
 
 #include "constants.h"
-#include "packets/cardamage.h"
+#include "f1telemetry.h"
 #include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
 
-class CCarDamageGraph
+class CCarDamageGraph23 : public ICarDamageGraph
 {
 public:
-    CCarDamageGraph()
+    CCarDamageGraph23()
     {
-        SPDLOG_TRACE("CCarDamageGraph()");
+        SPDLOG_TRACE("CCarDamageGraph23()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
@@ -28,7 +28,15 @@ public:
         mAxisFlagsY |= ImPlotAxisFlags_NoSideSwitch;
     }
 
-    void SetCarDamage(const SCarDamageData &carDamageData)
+    void ResetCarDamage() override
+    {
+        for (int i = 0; i < mDataPoints; ++i)
+        {
+            mCarDamageData[i] = 0;
+        }
+    }
+
+    void SetCarDamage(const SCarDamageGraphData &carDamageData) override
     {
         mCarDamageData[0] = carDamageData.engineDamage;
         mCarDamageData[1] = carDamageData.gearBoxDamage;
@@ -40,23 +48,15 @@ public:
         mCarDamageData[7] = carDamageData.engineTCWear;
     }
 
-    void ResetCarDamage()
-    {
-        for (int i = 0; i < 8; ++i)
-        {
-            mCarDamageData[i] = 0;
-        }
-    }
-
-    void ShowGraph(const ImVec2 spaceAvail) const
+    void ShowGraph(const ImVec2 spaceAvail) const override
     {
         // Display
         if (ImPlot::BeginPlot("Car Damage", ImVec2(spaceAvail.x / 2, (spaceAvail.y / 2)), ImPlotFlags_NoLegend))
         {
             static const double positions[] = {0, 1, 2, 3, 4, 5, 6, 7};
             // Configure
-            ImPlot::SetupAxisLimits(ImAxis_Y1, sMinY, sMaxY);
-            ImPlot::SetupAxisLimits(ImAxis_X1, sMinX - 0.5, 8 - 0.5);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, F1::sMinY, F1::sMaxY);
+            ImPlot::SetupAxisLimits(ImAxis_X1, F1::sMinX - 0.5, 8 - 0.5);
             ImPlot::SetupAxisTicks(ImAxis_X1, positions, 8, mLabels);
             ImPlot::SetupAxis(ImAxis_X1, nullptr, mAxisFlagsX);
             ImPlot::SetupAxis(ImAxis_Y1, nullptr, mAxisFlagsY);
@@ -64,17 +64,10 @@ public:
             for (int i = 0; i < 8; ++i)
             {
                 // Set color
-                ImPlot::SetNextFillStyle(CarDamageToColor(mCarDamageData[i]));
+                ImPlot::SetNextFillStyle(F1::CarDamageToColor(mCarDamageData[i]));
                 ImPlot::PlotBars(mLabels[i], &mCarDamageData[i], 1, 0.95, i);
             }
             ImPlot::EndPlot();
         }
     }
-
-private:
-    ImPlotAxisFlags mAxisFlagsX{0};
-    ImPlotAxisFlags mAxisFlagsY{0};
-
-    uint8_t mCarDamageData[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    const char *mLabels[8] = {"Engine", "Gearbox", "MGUH", "ES", "CE", "ICE", "MGUK", "Turbo"};
 };

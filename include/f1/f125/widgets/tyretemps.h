@@ -3,20 +3,22 @@
 #include "imgui.h"
 #include "implot.h"
 
+#include "f1telemetry.h"
 #include "constants.h"
-#include "f123constants.h"
-#include "packets/session.h"
+#include "f123/constants.h" // TODO: remove once updated
+#include "f125/constants.h"
+#include "f125/packets/session.h"
 #include "spdlog/spdlog.h"
 
 #include <array>
 #include <cstdint>
 
-class CTyreTemps
+class CTyreTemps25 : public ITyreTemps
 {
 public:
-    CTyreTemps()
+    CTyreTemps25()
     {
-        SPDLOG_TRACE("CTyreTemps()");
+        SPDLOG_TRACE("CTyreTemps25()");
         // Axis config
         mAxisFlagsX |= ImPlotAxisFlags_NoGridLines;
         mAxisFlagsX |= ImPlotAxisFlags_NoTickMarks;
@@ -30,16 +32,16 @@ public:
         mAxisFlagsY |= ImPlotAxisFlags_NoSideSwitch;
     }
 
-    void SetTyreCompound(F123::EActualTyreCompound actual, F123::EVisualTyreCompound visual)
+    void SetTyreCompound(uint8_t actual, uint8_t visual) override
     {
-        mActualCompound = actual;
-        mActualTyreCompoundStr = F123::sActualTyreCompoundToString.at(actual);
+        mActualCompound = F125::EActualTyreCompound(actual);
+        mActualTyreCompoundStr = F125::sActualTyreCompoundToString.at(mActualCompound);
 
-        mVisualTyreCompound = visual;
-        mVisualTyreCompoundStr = F123::sVisualTyreCompoundToString.at(visual);
+        mVisualTyreCompound = F125::EVisualTyreCompound(visual);
+        mVisualTyreCompoundStr = F125::sVisualTyreCompoundToString.at(mVisualTyreCompound);
     }
 
-    void SetTyreInnerTemps(const std::array<uint8_t, 4> tyreTempData)
+    void SetTyreInnerTemps(const std::array<uint8_t, 4> tyreTempData) override
     {
         for (int i = 0; i < 4; ++i)
         {
@@ -48,11 +50,11 @@ public:
     }
 
     // TODO: magic numbers everywhere
-    void ShowTyreInnerTemps(const ImVec2 spaceAvail) const
+    void ShowTyreInnerTemps(const ImVec2 spaceAvail) const override
     {
         const int item_count = 4;
         std::string title = "Tyre Inner Temp (C)";
-        if (mActualCompound != F123::EActualTyreCompound::Unknown)
+        if (mActualCompound != F125::EActualTyreCompound::Unknown)
         {
             title += " | Compound: " + mActualTyreCompoundStr + " (" + mVisualTyreCompoundStr + ")";
         }
@@ -61,14 +63,15 @@ public:
             const double positions[] = {0, 1, 2, 3};
             // Configure
             ImPlot::SetupAxisLimits(ImAxis_Y1, 60, 130);
-            ImPlot::SetupAxisLimits(ImAxis_X1, sMinX - 0.5, item_count - 0.5);
+            ImPlot::SetupAxisLimits(ImAxis_X1, F1::sMinX - 0.5, item_count - 0.5);
             ImPlot::SetupAxisTicks(ImAxis_X1, positions, item_count, mLabels);
             ImPlot::SetupAxis(ImAxis_X1, "", mAxisFlagsX);
             ImPlot::SetupAxis(ImAxis_Y1, "", mAxisFlagsY);
 
             for (int i = 0; i < item_count; ++i)
             {
-                ImPlot::SetNextFillStyle(TyreInnerTempToColor(mActualCompound, mTyreInnerTemps[i]));
+                // TODO: Update to F125::EActualTyreCompound
+                ImPlot::SetNextFillStyle(F1::TyreInnerTempToColor(F123::EActualTyreCompound(mActualCompound), mTyreInnerTemps[i]));
                 ImPlot::PlotBars(mLabels[i], &mTyreInnerTemps[i], 1, 0.95, i);
             }
 
@@ -77,13 +80,6 @@ public:
     }
 
 private:
-    ImPlotAxisFlags mAxisFlagsX{0};
-    ImPlotAxisFlags mAxisFlagsY{0};
-    F123::EActualTyreCompound mActualCompound{F123::EActualTyreCompound::Unknown};
-    std::string mActualTyreCompoundStr{""};
-    F123::EVisualTyreCompound mVisualTyreCompound{F123::EVisualTyreCompound::Unknown};
-    std::string mVisualTyreCompoundStr{""};
-
-    uint8_t mTyreInnerTemps[4] = {0, 0, 0, 0};
-    const char *mLabels[4] = {"RL", "RR", "FL", "FR"};
+    F125::EActualTyreCompound mActualCompound{F125::EActualTyreCompound::Unknown};
+    F125::EVisualTyreCompound mVisualTyreCompound{F125::EVisualTyreCompound::Unknown};
 };

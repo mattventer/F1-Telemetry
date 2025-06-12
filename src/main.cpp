@@ -8,24 +8,27 @@
 #include <winsock2.h>
 #include <windows.h>
 
-#include "f123constants.h"
-#include "packets/cardamage.h"
-#include "packets/carsetup.h"
-#include "packets/carstatus.h"
-#include "packets/cartelemetry.h"
-#include "packets/lapdata.h"
-#include "packets/event.h"
-#include "packets/header.h"
-#include "packets/participants.h"
-#include "packets/session.h"
+#include "f1telemetry.h"
+#include "f123/f123telemetry.h"
+#include "f125/f125telemetry.h"
+#include "header.h"
 #include "udpserver.h"
+#include "f123/widgets/cardamage.h"
+#include "f123/widgets/lapdeltas.h"
+#include "f123/widgets/lapinfoheader.h"
+#include "f123/widgets/sessioninfo.h"
+#include "f123/widgets/tyrewear.h"
+#include "f123/widgets/tyretemps.h"
+
+#include "f125/widgets/cardamage.h"
+#include "f125/widgets/lapdeltas.h"
+#include "f125/widgets/lapinfoheader.h"
+#include "f125/widgets/sessioninfo.h"
+#include "f125/widgets/tyrewear.h"
+#include "f125/widgets/tyretemps.h"
+
 #include "windows/dashboard.h"
-#include "widgets/cardamage.h"
-#include "widgets/lapdeltas.h"
-#include "widgets/lapinfoheader.h"
-#include "widgets/sessionhistory.h"
-#include "widgets/sessioninfo.h"
-#include "widgets/tyrewear.h"
+#include "windows/sessionhistory.h"
 
 #include "imgui.h"
 #include "implot.h"
@@ -59,17 +62,33 @@ namespace
 std::unique_ptr<CUdpClient> client;
 std::thread listener;
 
-// Graphs
-std::shared_ptr<CSessionInfo> sSessionInfo;
-std::shared_ptr<CSessionHistory> sSessionHistory;
-std::shared_ptr<CTyreTemps> sTyreTemps;
-std::shared_ptr<CTyreWearGraph> sTyreWearGraph;
-std::shared_ptr<CCarDamageGraph> sCarDamageGraph;
-std::shared_ptr<CLapDeltas> sLapDeltas;
-std::shared_ptr<CLapInfoHeader> sLapInfoHeader;
+// F123 Graphs
+std::shared_ptr<CSessionInfo23> sSessionInfo23;
+std::shared_ptr<CCarDamageGraph23> sCarDamageGraph23;
+std::shared_ptr<CTyreTemps23> sTyreTemps23;
+std::shared_ptr<CTyreWearGraph23> sTyreWearGraph23;
+std::shared_ptr<CLapInfoHeader23> sLapInfoHeader23;
+std::shared_ptr<CLapDeltas23> sLapDeltas23;
+
+// F125 Graphs
+std::shared_ptr<CSessionInfo25> sSessionInfo25;
+std::shared_ptr<CCarDamageGraph25> sCarDamageGraph25;
+std::shared_ptr<CTyreTemps25> sTyreTemps25;
+std::shared_ptr<CTyreWearGraph25> sTyreWearGraph25;
+std::shared_ptr<CLapInfoHeader25> sLapInfoHeader25;
+std::shared_ptr<CLapDeltas25> sLapDeltas25;
+
+// Handlers
+std::unique_ptr<CF123Telemetry> sF123Telemetry;
+std::unique_ptr<CF125Telemetry> sF125Telemetry;
 
 // Windows
-std::shared_ptr<CDashboard> sDashboard;
+std::shared_ptr<CDashboard> sDashboard23;
+std::shared_ptr<CDashboard> sDashboard25;
+std::shared_ptr<CSessionHistory> sSessionHistory;
+
+// Static variables
+static volatile uint16_t sActiveYear{2023}; // 2023 default
 
 struct FrameContext
 {
@@ -112,173 +131,28 @@ void signal_callback_handler(int signal)
 
 void ParsePacket(char *buffer, int n)
 {
-    if (n < 0)
+    if (n < sizeof(SPacketHeader))
     {
-        std::cout << "Empty Packet" << std::endl;
+        SPDLOG_ERROR("Invalid packet size");
         return;
     }
+
+    // Parse header
     SPacketHeader header;
     header.get(buffer);
-    if (header.packetFormat != 2023)
-    {
-        std::cerr << "Incorrect packet format. Expected 2023, received " << header.packetFormat << std::endl;
-        return;
-    }
 
-    // Update last received time
-    sSessionInfo->NewPacket();
-
-    // Parse based on packet id
-    const EPacketId id = sPacketIds[header.packetId];
-    const int playerIdx = header.playerCarIndex;
-
-    switch (id)
+    switch (header.packetFormat)
     {
-    case EPacketId::Participants:
-    {
-        SPacketParticipantsData packetParticipantsData;
-        packetParticipantsData.get(buffer);
+    case 2023:
+        sActiveYear = 2023;
+        sF123Telemetry->ParsePacket(buffer, header);
         break;
-    }
-    case EPacketId::CarSetups:
-    {
-        SPacketCarSetupData carSetup;
-        carSetup.get(buffer);
+    case 2025:
+        sActiveYear = 2025;
+        sF125Telemetry->ParsePacket(buffer, header);
         break;
-    }
-    case EPacketId::CarStatus:
-    {
-        SPacketCarStatusData carStatus;
-        carStatus.get(buffer);
-        try
-        {
-            auto actual = static_cast<EActualTyreCompound>(carStatus.carStatusData[playerIdx].actualTyreCompound);
-            auto visual = static_cast<EVisualTyreCompound>(carStatus.carStatusData[playerIdx].visualTyreCompound);
-            sTyreTemps->SetTyreCompound(actual, visual);
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-        break;
-    }
-    case EPacketId::CarTelemetry:
-    {
-        SPacketCarTelemetryData carTelemetry;
-        carTelemetry.get(buffer);
-
-        std::array<uint8_t, 4> tyreInnerTemps;
-        // Get data
-        for (int i = 0; i < 4; ++i)
-        {
-            tyreInnerTemps[i] = carTelemetry.carTelemetryData[playerIdx].tyresInnerTemperature[i];
-        }
-        sTyreTemps->SetTyreInnerTemps(tyreInnerTemps);
-        break;
-    }
-    case EPacketId::CarDamage:
-    {
-        SPacketCarDamageData damage;
-        damage.get(buffer);
-
-        std::array<float, 4> tyreWear;
-        // Get data
-        for (int i = 0; i < 4; ++i)
-        {
-            tyreWear[i] = damage.carDamageData[playerIdx].tyresWear[i];
-        }
-        // TODO: move CTyreWear into CCarDamage
-        sTyreWearGraph->SetTyreWear(tyreWear);
-        sCarDamageGraph->SetCarDamage(damage.carDamageData[playerIdx]);
-        break;
-    }
-    case EPacketId::LapData:
-    {
-        SPacketLapData lapData;
-        lapData.get(buffer);
-        const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
-        SLapData carBehindLapData = {0};
-
-        // Make sure we are in a race
-        if (myRacePosition < 21)
-        {
-            for (int i = 0; i < 22; ++i)
-            {
-                // Car behind lap data
-                if (lapData.lapData[i].carPosition == myRacePosition + 1)
-                {
-                    carBehindLapData = lapData.lapData[i];
-                    break;
-                }
-            }
-        }
-
-        sSessionInfo->SessionStarted();
-        sLapDeltas->SetLapData(lapData.lapData[playerIdx], carBehindLapData);
-        sLapInfoHeader->SetCurrentLap(lapData.lapData[playerIdx].currentLapNum);
-        break;
-    }
-    case EPacketId::Session:
-    {
-        const auto sessionUid = header.sessionUid;
-        // sSessionInfo->SessionStarted(); // Handled in events
-        SPacketSessionData sessionData;
-        sessionData.get(buffer);
-
-        auto trackId = static_cast<ETrackId>(sessionData.trackId);
-        auto sessionType = static_cast<ESessionType>(sessionData.sessionType);
-
-        // Banking on this always coming before LapData
-        if (!sSessionHistory->SessionActive())
-        {
-            sSessionHistory->StartSession(sessionUid, trackId, sessionType);
-        }
-        // // TODO: fix, always 0
-        // SPDLOG_INFO("Pit: {}-{} rejoin: {}", sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
-        // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
-        break;
-    }
-    case EPacketId::SessionHistory:
-    {
-        SPacketSessionHistoryData sessionHistory;
-        sessionHistory.get(buffer);
-
-        // Only care about the player data
-        if (sessionHistory.carIdx == playerIdx)
-        {
-            sSessionHistory->SetSessionHistoryData(sessionHistory);
-        }
-        break;
-    }
-    case EPacketId::Event:
-    {
-        SPacketEventData event;
-        switch (event.getCode(buffer))
-        {
-        case EEventCode::SessionStarted:
-            sSessionInfo->SessionStarted();
-            sLapDeltas->ResetLapData();
-            break;
-        case EEventCode::SessionEnded:
-            sSessionInfo->SessionStopped();
-            sSessionHistory->StopSession();
-            try
-            {
-                const auto activeSessionUid = sSessionHistory->ActiveSessionUid();
-                SPDLOG_ERROR("Storing session history for {}", activeSessionUid);
-                sSessionHistory->StoreSessionHistory();
-            }
-            catch (const std::exception &e)
-            {
-                SPDLOG_ERROR("Storing session history caught exception {}", e.what());
-            }
-            break;
-        default:
-            break;
-        }
-        break;
-    }
     default:
+        SPDLOG_WARN("Incorrect packet format {}", header.packetFormat);
         break;
     }
 }
@@ -306,19 +180,53 @@ int main()
     spdlog::set_default_logger(logger);
     spdlog::set_level(sLogGlobalLevel);
 
-    SPDLOG_INFO("Starting F1 Telemetry");
+    SPDLOG_TRACE("Starting F1 Telemetry");
 
-    // Initialize graphs
-    sSessionInfo = std::make_shared<CSessionInfo>();
+    // Initialize common objects
     sSessionHistory = std::make_shared<CSessionHistory>();
-    sTyreTemps = std::make_shared<CTyreTemps>();
-    sTyreWearGraph = std::make_shared<CTyreWearGraph>();
-    sCarDamageGraph = std::make_shared<CCarDamageGraph>();
-    sLapDeltas = std::make_shared<CLapDeltas>();
-    sLapInfoHeader = std::make_shared<CLapInfoHeader>();
 
-    // Initialize dashboard window
-    sDashboard = std::make_shared<CDashboard>(sTyreWearGraph, sTyreTemps, sCarDamageGraph, sLapDeltas, sLapInfoHeader);
+    // TODO: Create at runtime based on packet version
+    // Initialize F123 graphs
+    sSessionInfo23 = std::make_shared<CSessionInfo23>();
+    sCarDamageGraph23 = std::make_shared<CCarDamageGraph23>();
+    sTyreTemps23 = std::make_shared<CTyreTemps23>();
+    sTyreWearGraph23 = std::make_shared<CTyreWearGraph23>();
+    sLapDeltas23 = std::make_shared<CLapDeltas23>();
+    sLapInfoHeader23 = std::make_shared<CLapInfoHeader23>();
+
+    // Initialize F123 graphs
+    sSessionInfo25 = std::make_shared<CSessionInfo25>();
+    sCarDamageGraph25 = std::make_shared<CCarDamageGraph25>();
+    sTyreTemps25 = std::make_shared<CTyreTemps25>();
+    sTyreWearGraph25 = std::make_shared<CTyreWearGraph25>();
+    sLapDeltas25 = std::make_shared<CLapDeltas25>();
+    sLapInfoHeader25 = std::make_shared<CLapInfoHeader25>();
+
+    // Initialize F123 handlers
+    SF1TelemetryResources rsrcs23;
+    rsrcs23.sessionInfo = sSessionInfo23;
+    rsrcs23.sessionHistory = sSessionHistory;
+    rsrcs23.tyreTemps = sTyreTemps23;
+    rsrcs23.tyreWearGraph = sTyreWearGraph23;
+    rsrcs23.carDamageGraph = sCarDamageGraph23;
+    rsrcs23.lapDeltas = sLapDeltas23;
+    rsrcs23.lapInfoHeader = sLapInfoHeader23;
+    sF123Telemetry = std::make_unique<CF123Telemetry>(rsrcs23);
+
+    // Initialize F125 handlers
+    SF1TelemetryResources rsrcs25;
+    rsrcs25.sessionInfo = sSessionInfo25;
+    rsrcs25.sessionHistory = sSessionHistory;
+    rsrcs25.tyreTemps = sTyreTemps25;
+    rsrcs25.tyreWearGraph = sTyreWearGraph25;
+    rsrcs25.carDamageGraph = sCarDamageGraph25;
+    rsrcs25.lapDeltas = sLapDeltas25;
+    rsrcs25.lapInfoHeader = sLapInfoHeader25;
+    sF125Telemetry = std::make_unique<CF125Telemetry>(rsrcs25);
+
+    // Initialize windows
+    sDashboard23 = std::make_shared<CDashboard>(sTyreWearGraph23, sTyreTemps23, sCarDamageGraph23, sLapDeltas23, sLapInfoHeader23);
+    sDashboard25 = std::make_shared<CDashboard>(sTyreWearGraph25, sTyreTemps25, sCarDamageGraph25, sLapDeltas25, sLapInfoHeader25);
 
     // Signal handler
     signal(SIGINT, signal_callback_handler);
@@ -326,7 +234,8 @@ int main()
 
     listener = std::thread(&CUdpClient::start, *client, ParsePacket);
 
-    sSessionInfo->SetSocketInfo(sUdpPort);
+    sSessionInfo23->SetSocketInfo(sUdpPort);
+    sSessionInfo25->SetSocketInfo(sUdpPort);
 
     // Create application window
     // ImGui_ImplWin32_EnableDpiAwareness();
@@ -374,7 +283,8 @@ int main()
     sSessionHistory->SetFonts(tableHeaderFont, raceHeaderFont, sessionHeaderFont, generalTableFont);
 
     auto sessionInfoFont = io.Fonts->AddFontFromFileTTF("misc/fonts/ABeeZee-Regular.ttf", 16.0f);
-    sSessionInfo->SetFont(sessionInfoFont);
+    sSessionInfo23->SetFont(sessionInfoFont);
+    sSessionInfo25->SetFont(sessionInfoFont);
 
     // Our state
     static bool show_history_window = true;
@@ -429,7 +339,16 @@ int main()
         }
 
         // Always show at bottom
-        sSessionInfo->ShowSessionStatus();
+        if (sActiveYear == 2025)
+        {
+            sSessionInfo25->ShowSessionStatus();
+        }
+        else
+        {
+            // Default to 2023
+            sSessionInfo23->ShowSessionStatus();
+        }
+
         auto ySpaceConsumed = 62.0f; // TODO: Magic Y-offset number
         ImGui::SetCursorPos(ImGui::GetCursorStartPos());
 
@@ -441,7 +360,14 @@ int main()
 
             if (ImGui::BeginTabItem("Live"))
             {
-                sDashboard->ShowWindow(spaceAvail);
+                if (sActiveYear == 2023)
+                {
+                    sDashboard23->ShowWindow(spaceAvail);
+                }
+                else if (sActiveYear == 2025)
+                {
+                    sDashboard25->ShowWindow(spaceAvail);
+                }
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("History"))
@@ -449,16 +375,16 @@ int main()
                 sSessionHistory->ShowSessionHistory(&show_history_window);
                 ImGui::EndTabItem();
             }
-            if (show_demo_windows && ImGui::BeginTabItem("ImGui Demo"))
-            {
-                ImGui::ShowDemoWindow();
-                ImGui::EndTabItem();
-            }
-            if (show_demo_windows && ImGui::BeginTabItem("ImPlot Demo"))
-            {
-                ImPlot::ShowDemoWindow();
-                ImGui::EndTabItem();
-            }
+            // if (show_demo_windows && ImGui::BeginTabItem("ImGui Demo"))
+            // {
+            //     ImGui::ShowDemoWindow();
+            //     ImGui::EndTabItem();
+            // }
+            // if (show_demo_windows && ImGui::BeginTabItem("ImPlot Demo"))
+            // {
+            //     ImPlot::ShowDemoWindow();
+            //     ImGui::EndTabItem();
+            // }
             ImGui::EndTabBar();
         }
 
