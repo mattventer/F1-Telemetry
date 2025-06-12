@@ -188,8 +188,6 @@ public:
                 mSessionInfo->SessionStopped();
                 try
                 {
-                    const auto activeSessionUid = mSessionHistory->ActiveSessionUid();
-                    SPDLOG_ERROR("Storing session history for {}", activeSessionUid);
                     mSessionHistory->StoreSessionHistory();
                 }
                 catch (const std::exception &e)

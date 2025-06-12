@@ -290,7 +290,7 @@ public:
         return mSessionActive;
     }
 
-    uint16_t ActiveSessionUid()
+    uint64_t ActiveSessionUid()
     {
         return mActiveSessionUid;
     }

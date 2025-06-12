@@ -50,14 +50,12 @@ public:
         {
         case F123::EPacketId::Participants:
         {
-            SPDLOG_TRACE("EPacketId::Participants");
             // SPacketParticipantsData packetParticipantsData;
             // packetParticipantsData.get(packet);
             break;
         }
         case F123::EPacketId::CarSetups:
         {
-            SPDLOG_TRACE("EPacketId::CarSetups");
             // SPacketCarSetupData carSetup;
             // carSetup.get(packet);
             break;
@@ -79,7 +77,6 @@ public:
         }
         case F123::EPacketId::CarTelemetry:
         {
-            SPDLOG_TRACE("EPacketId::CarTelemetry");
             F123::SPacketCarTelemetryData carTelemetry;
             carTelemetry.get(packet);
 
@@ -94,7 +91,6 @@ public:
         }
         case F123::EPacketId::CarDamage:
         {
-            SPDLOG_TRACE("EPacketId::CarDamage");
             F123::SPacketCarDamageData damage;
             damage.get(packet);
 
@@ -121,7 +117,6 @@ public:
         }
         case F123::EPacketId::LapData:
         {
-            SPDLOG_TRACE("EPacketId::LapData");
             F123::SPacketLapData lapData;
             lapData.get(packet);
             const auto myRacePosition = lapData.lapData[playerIdx].carPosition;
@@ -160,7 +155,6 @@ public:
         }
         case F123::EPacketId::Session:
         {
-            SPDLOG_TRACE("EPacketId::Session");
             F123::SPacketSessionData sessionData;
             sessionData.get(packet);
 
@@ -174,7 +168,6 @@ public:
         }
         case F123::EPacketId::SessionHistory:
         {
-            SPDLOG_TRACE("EPacketId::SessionHistory");
             SPacketSessionHistoryData sessionHistory;
             sessionHistory.get(packet);
 
@@ -188,7 +181,6 @@ public:
         }
         case F123::EPacketId::Event:
         {
-            SPDLOG_TRACE("EPacketId::Event");
             F123::SPacketEventData event;
             switch (event.getCode(packet))
             {
@@ -199,8 +191,6 @@ public:
                 mSessionInfo->SessionStopped();
                 try
                 {
-                    const auto activeSessionUid = mSessionHistory->ActiveSessionUid();
-                    SPDLOG_ERROR("Storing session history for {}", activeSessionUid);
                     mSessionHistory->StoreSessionHistory();
                 }
                 catch (const std::exception &e)
@@ -213,6 +203,8 @@ public:
                 break;
             }
         }
+        default:
+            break;
         }
     }
 };
