@@ -54,7 +54,7 @@ public:
             SPDLOG_DEBUG("Loaded {} races", mRacesLoaded);
         }
 
-        // // For testing
+        // // For testing (hmm...maybe actually write some actual testcases)
         // SRaceWeekend dummyRace1;
         // dummyRace1.trackName = "TrackName1";
         // dummyRace1.date = "dummy date1";
@@ -114,8 +114,6 @@ public:
 
     void StoreSessionHistory()
     {
-        SPDLOG_TRACE("StoreSessionHistory() entry");
-
         // Only want to store new races
         int nRaces = mRaces.size() - mRacesLoaded;
 
@@ -131,19 +129,14 @@ public:
 
             if (!mStorage.StoreRaceData(mRaces, nRaces))
             {
-                SPDLOG_ERROR("Store failed!");
+                SPDLOG_ERROR("Store race data failed!");
             }
-        }
-        else
-        {
-            SPDLOG_DEBUG("No new races to store");
         }
     }
 
-    // TODO: Change to generic struct - not packet
+    // TODO: Change to generic struct - not packet specific to F1 version
     void SetSessionHistoryData(const F123::SPacketSessionHistoryData &mySessionData)
     {
-        SPDLOG_TRACE("SetSessionHistoryData() entry");
         // Don't care
         if ((mySessionData.numLaps == 0) || (mySessionData.header.sessionUid == 0))
         {
@@ -156,24 +149,17 @@ public:
         auto sessionIdx = std::get<1>(location);
         SPDLOG_TRACE("New session data: uid {}, raceIdx {}, sessionIdx {}", mySessionData.header.sessionUid, raceIdx, sessionIdx);
 
-        // Session doesn't exist, create a new one
+        // Session doesn't exist
+        // TODO: Seems I wrote this this expecting the session to already exist? Could just create it here...
         if (sessionIdx < 0)
         {
-            SPDLOG_ERROR("Session UID {} doesn't exist but got SPacketSessionHistoryData for it", mySessionData.header.sessionUid);
-            return;
-        }
-
-        // No lap data yet
-        if (mySessionData.numLaps == 0)
-        {
-            SPDLOG_TRACE("Lap #{}, ignoring", mySessionData.numLaps);
+            SPDLOG_ERROR("Session UID {} doesn't exist but you are trying to store it.", mySessionData.header.sessionUid);
             return;
         }
 
         uint8_t lapNum = mySessionData.numLaps;                                  // Incoming lap info
         auto currLapIdx = lapNum - 1;                                            // Index this lap relates to
         int lapsStored = mRaces.at(raceIdx).sessions.at(sessionIdx).laps.size(); // How many laps have we stored already?
-        SPDLOG_TRACE("Got lap #{}. Last lap received #{}", lapNum, lapsStored);
 
         // Need to add a new lap
         if (lapNum > lapsStored)
@@ -193,13 +179,11 @@ public:
                 if ((lap.sector1MS + lap.sector1MS + lap.sector1MS) > 0)
                 {
                     mRaces.at(raceIdx).sessions.at(sessionIdx).laps.push_back(lap);
-                    SPDLOG_TRACE("Pushed new lap {} on track {}", lap.lapNumber, mRaces.at(raceIdx).trackName);
                 }
 
                 // Sector 3 + Total lap time for last lap
                 if (i > 0 && lapNum == lapsStored + 1)
                 {
-                    SPDLOG_TRACE("Sector 3 + Total lap time for last lap");
                     mRaces.at(raceIdx).sessions.at(sessionIdx).laps.at(i - 1).sector3MS = mySessionData.lapHistoryData[i - 1].sector3TimeInMS;
                     mRaces.at(raceIdx).sessions.at(sessionIdx).laps.at(i - 1).totalLapTime = mySessionData.lapHistoryData[i - 1].lapTimeInMS;
                 }
@@ -219,11 +203,6 @@ public:
             if (lap.sector1MS + lap.sector2MS + lap.sector3MS > 0)
             {
                 mRaces[raceIdx].sessions[sessionIdx].laps[currLapIdx] = lap;
-            }
-            else
-            {
-                // TODO: remove
-                SPDLOG_TRACE("Lap #{} data but all 0's", lapNum);
             }
         }
 

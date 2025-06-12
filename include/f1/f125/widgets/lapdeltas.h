@@ -132,22 +132,23 @@ private:
         deltaLeaderMS = myLapData.deltaToRaceLeaderInMS;
         deltaFrontMs = myLapData.deltaToCarInFrontInMS;
 
-        // Is there a car behind the player?
-        if (carBehindLapData.carPosition > 1)
+        // Is there a car behind the player? Returns 0 if no car behind
+        if (carBehindLapData.carPosition != 0)
         {
             deltaBehindMs = carBehindLapData.deltaToCarInFrontInMS;
         }
 
+        // Convert to seconds
         deltaLeaderSec = deltaLeaderMS / 1000.0f;
         deltaFrontSec = deltaFrontMs / 1000.0f;
         deltaBehindSec = deltaBehindMs / 1000.0f;
 
-        // Convert to seconds
         // TODO: Getting some outliers when passing or getting passed
         mDeltaLeader[mDataCount] = deltaLeaderSec;
         mDeltaFront[mDataCount] = deltaFrontSec;
         mDeltaBehind[mDataCount] = deltaBehindSec;
         mXaxis[mDataCount] = playerLapTime / 1000.0f;
+        mDataCount++;
 
         // Chart Y-axis max
         if (deltaLeaderSec > mMaxDelta)
@@ -176,6 +177,5 @@ private:
         {
             mMinDelta = deltaBehindSec;
         }
-        mDataCount++;
     }
 };

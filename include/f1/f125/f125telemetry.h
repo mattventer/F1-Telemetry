@@ -26,8 +26,6 @@ public:
 
     void ParsePacket(char *packet, const SPacketHeader &header)
     {
-        SPDLOG_TRACE("CF125Telemetry::ParsePacket() id:{}", header.packetId);
-
         if (header.packetFormat != mYear)
         {
             SPDLOG_ERROR("Invalid packet format {}. Expected {}", header.packetFormat, mYear);
@@ -94,14 +92,14 @@ public:
             damage.get(packet);
 
             std::array<float, 4> tyreWear;
-            // Get data
+            // Extract tyre wear data
             for (int i = 0; i < 4; ++i)
             {
                 tyreWear[i] = damage.carDamageData[playerIdx].tyresWear[i];
             }
-            // TODO: move CTyreWear into CCarDamage
-            // mTyreWearGraph->SetTyreWear(tyreWear);
+            mTyreWearGraph->SetTyreWear(tyreWear);
 
+            // Extract car damage graph data
             SCarDamageGraphData graphData;
             graphData.engineDamage = damage.carDamageData[playerIdx].engineDamage;
             graphData.gearBoxDamage = damage.carDamageData[playerIdx].gearBoxDamage;
@@ -167,9 +165,7 @@ public:
                 mSessionHistory->StartSession(header.sessionUid, trackId, sessionType);
             }
 
-            // // TODO: fix, always 0
-            // SPDLOG_INFO("Pit: {}-{} rejoin: {}", sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
-            // sLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
+            mLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
             break;
         }
         case F125::EPacketId::SessionHistory:
