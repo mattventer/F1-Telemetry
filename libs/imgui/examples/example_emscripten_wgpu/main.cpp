@@ -15,12 +15,11 @@
 #include <webgpu/webgpu_cpp.h>
 
 // Global WebGPU required states
-static WGPUDevice        wgpu_device = nullptr;
-static WGPUSurface       wgpu_surface = nullptr;
-static WGPUTextureFormat wgpu_preferred_fmt = WGPUTextureFormat_RGBA8Unorm;
-static WGPUSwapChain     wgpu_swap_chain = nullptr;
-static int               wgpu_swap_chain_width = 0;
-static int               wgpu_swap_chain_height = 0;
+static WGPUDevice    wgpu_device = nullptr;
+static WGPUSurface   wgpu_surface = nullptr;
+static WGPUSwapChain wgpu_swap_chain = nullptr;
+static int           wgpu_swap_chain_width = 0;
+static int           wgpu_swap_chain_height = 0;
 
 // Forward declarations
 static void MainLoopStep(void* window);
@@ -72,7 +71,7 @@ int main(int, char**)
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOther(window, true);
-    ImGui_ImplWGPU_Init(wgpu_device, 3, wgpu_preferred_fmt, WGPUTextureFormat_Undefined);
+    ImGui_ImplWGPU_Init(wgpu_device, 3, WGPUTextureFormat_RGBA8Unorm, WGPUTextureFormat_Undefined);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -119,11 +118,9 @@ static bool InitWGPU()
     wgpu::SurfaceDescriptor surface_desc = {};
     surface_desc.nextInChain = &html_surface_desc;
 
-    wgpu::Instance instance = wgpuCreateInstance(nullptr);
-    wgpu::Surface surface = instance.CreateSurface(&surface_desc);
-    wgpu::Adapter adapter = {};
-    wgpu_preferred_fmt = (WGPUTextureFormat)surface.GetPreferredFormat(adapter);
-    wgpu_surface = surface.Release();
+    // Use 'null' instance
+    wgpu::Instance instance = {};
+    wgpu_surface = instance.CreateSurface(&surface_desc).Release();
 
     return true;
 }
@@ -147,7 +144,7 @@ static void MainLoopStep(void* window)
         wgpu_swap_chain_height = height;
         WGPUSwapChainDescriptor swap_chain_desc = {};
         swap_chain_desc.usage = WGPUTextureUsage_RenderAttachment;
-        swap_chain_desc.format = wgpu_preferred_fmt;
+        swap_chain_desc.format = WGPUTextureFormat_RGBA8Unorm;
         swap_chain_desc.width = width;
         swap_chain_desc.height = height;
         swap_chain_desc.presentMode = WGPUPresentMode_Fifo;
