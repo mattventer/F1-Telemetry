@@ -119,7 +119,9 @@ public:
 
         if (mRaces.size() > 0)
         {
-            // TODO: Temporary fix for when a race was save partway through
+            // TODO: update: If possible, we store 1 additional race because if the last race was saved part-way through,
+            // and the other part of the session is now in mRaces but not storage, we want to include that
+            // Skips sessions that already exist
             if (nRaces + 1 <= mRaces.size())
             {
                 nRaces++;

@@ -197,7 +197,6 @@ public:
                 break;
             case F123::EEventCode::SessionEnded:
                 mSessionInfo->SessionStopped();
-                mSessionHistory->StopSession();
                 try
                 {
                     const auto activeSessionUid = mSessionHistory->ActiveSessionUid();
@@ -208,6 +207,7 @@ public:
                 {
                     SPDLOG_ERROR("Storing session history caught exception {}", e.what());
                 }
+                mSessionHistory->StopSession();
                 break;
             default:
                 break;
