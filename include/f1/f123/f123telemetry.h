@@ -162,26 +162,14 @@ public:
         {
             SPDLOG_TRACE("EPacketId::Session");
             F123::SPacketSessionData sessionData;
-            F123::ETrackId trackId;
-            F123::ESessionType sessionType;
             sessionData.get(packet);
-
-            try
-            {
-                trackId = static_cast<F123::ETrackId>(sessionData.trackId);
-                sessionType = static_cast<F123::ESessionType>(sessionData.sessionType);
-            }
-            catch (const std::exception &e)
-            {
-                SPDLOG_ERROR("static cast error");
-                break;
-            }
 
             // Banking on this always coming before LapData
             if (!mSessionHistory->SessionActive())
             {
-                mSessionHistory->StartSession(header.sessionUid, trackId, sessionType);
+                mSessionHistory->StartSession(F1::Version::F123, header.sessionUid, sessionData.trackId, sessionData.sessionType);
             }
+            mLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
             break;
         }
         case F123::EPacketId::SessionHistory:

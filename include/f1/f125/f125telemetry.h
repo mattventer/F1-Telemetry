@@ -155,16 +155,11 @@ public:
             F125::SPacketSessionData sessionData;
             sessionData.get(packet);
 
-            // TODO: Update to 25
-            auto trackId = static_cast<F123::ETrackId>(sessionData.trackId);
-            auto sessionType = static_cast<F123::ESessionType>(sessionData.sessionType);
-
             // Banking on this always coming before LapData
             if (!mSessionHistory->SessionActive())
             {
-                mSessionHistory->StartSession(header.sessionUid, trackId, sessionType);
+                mSessionHistory->StartSession(F1::Version::F125, header.sessionUid, sessionData.trackId, sessionData.sessionType);
             }
-
             mLapInfoHeader->SetPitLapWindow(sessionData.pitStopWindowIdealLap, sessionData.pitStopWindowLatestLap, sessionData.pitStopRejoinPosition);
             break;
         }

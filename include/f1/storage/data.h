@@ -1,6 +1,6 @@
 #pragma once
 
-#include "f123/constants.h"
+#include "constants.h"
 
 #include <cstdint>
 #include <string>
@@ -20,9 +20,10 @@ namespace SessionStorage
 
     struct SSessionData
     {
+        F1::Version version{F1::Version::UNKNOWN};
         uint64_t uid{0};
         bool complete{false};
-        F123::ESessionType sessionType{F123::ESessionType::Unknown};
+        uint8_t sessionType{0};
         std::vector<SLap> laps{0};
 
         int fastestSec1LapNum{0};

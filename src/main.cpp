@@ -360,19 +360,20 @@ int main()
 
             if (ImGui::BeginTabItem("Live"))
             {
-                if (sActiveYear == 2023)
-                {
-                    sDashboard23->ShowWindow(spaceAvail);
-                }
-                else if (sActiveYear == 2025)
+                if (sActiveYear == 2025)
                 {
                     sDashboard25->ShowWindow(spaceAvail);
+                }
+                else
+                {
+                    // Default to F123
+                    sDashboard23->ShowWindow(spaceAvail);
                 }
                 ImGui::EndTabItem();
             }
             if (ImGui::BeginTabItem("History"))
             {
-                sSessionHistory->ShowSessionHistory(&show_history_window);
+                sSessionHistory->ShowSessionHistory(spaceAvail);
                 ImGui::EndTabItem();
             }
             // if (show_demo_windows && ImGui::BeginTabItem("ImGui Demo"))

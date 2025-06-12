@@ -1,5 +1,6 @@
 #pragma once
 
+#include "constants.h"
 #include "data.h"
 #include "spdlog/spdlog.h"
 #include "tinyxml2.h"
@@ -18,6 +19,7 @@ namespace
     const char *sRaceWeekendNodeKey = "RaceWeekend";
     const char *sRaceWeekendTrackKey = "track";
     const char *sRaceWeekendDateKey = "date";
+    const char *sSessionVersionKey = "v";
     const char *sSessionUidKey = "uid";
     const char *sSessionNodeKey = "session";
     const char *sSessionTypeKey = "type";
@@ -112,8 +114,10 @@ public:
                 SessionStorage::SSessionData newSession;
                 try
                 {
+                    // Returns 0 if sSessionVersionKey does not exist, so defaults to F123
+                    newSession.version = F1::Version(session->UnsignedAttribute(sSessionVersionKey));
                     newSession.uid = static_cast<uint64_t>(session->Unsigned64Attribute(sSessionUidKey));
-                    newSession.sessionType = static_cast<F123::ESessionType>(session->UnsignedAttribute(sSessionTypeKey));
+                    newSession.sessionType = static_cast<uint8_t>(session->UnsignedAttribute(sSessionTypeKey));
                     newSession.fastestLapNum = static_cast<uint8_t>(session->FirstChildElement(sFastestLapNumNodeKey)->UnsignedText());
                     newSession.fastestSec1LapNum = static_cast<uint8_t>(session->FirstChildElement(sFastestSec1LapNumNodeKey)->UnsignedText());
                     newSession.fastestSec2LapNum = static_cast<uint8_t>(session->FirstChildElement(sFastestSec2LapNumNodeKey)->UnsignedText());
@@ -121,7 +125,7 @@ public:
                 }
                 catch (const std::exception &e)
                 {
-                    std::cout << e.what() << std::endl;
+                    SPDLOG_ERROR("Loading sessions for track {} caught exception: {}", newRace.trackName, e.what());
                     continue;
                 }
 
@@ -139,7 +143,7 @@ public:
                     }
                     catch (const std::exception &e)
                     {
-                        std::cout << e.what() << std::endl;
+                        SPDLOG_ERROR("Loading lap data for session {} caught exception: {}", newSession.uid, e.what());
                         continue;
                     }
 
@@ -274,8 +278,9 @@ public:
             for (int j = firstSessionToStore; j < races[newRaceIdx].sessions.size(); ++j)
             {
                 auto sessionNode = doc.NewElement(sSessionNodeKey);
+                sessionNode->SetAttribute(sSessionVersionKey, (int8_t)races[newRaceIdx].sessions[j].version);
                 sessionNode->SetAttribute(sSessionUidKey, std::to_string(races[newRaceIdx].sessions[j].uid).c_str());
-                sessionNode->SetAttribute(sSessionTypeKey, static_cast<uint8_t>(races[newRaceIdx].sessions[j].sessionType));
+                sessionNode->SetAttribute(sSessionTypeKey, races[newRaceIdx].sessions[j].sessionType);
 
                 auto fastestSec1LapNum = doc.NewElement(sFastestSec1LapNumNodeKey);
                 fastestSec1LapNum->SetText(std::to_string(races[newRaceIdx].sessions[j].fastestSec1LapNum).c_str());

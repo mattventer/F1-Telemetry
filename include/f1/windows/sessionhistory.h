@@ -25,7 +25,7 @@ using namespace SessionStorage;
 
 namespace
 {
-    static ImGuiTableFlags sTableFlags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+    static ImGuiTableFlags sTableFlags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_ScrollY;
 
     // Graphing conversions
     const auto sMsPerSec = 1000.0f;
@@ -214,19 +214,15 @@ public:
     }
 
     // TODO: Make more generic for both 23/25 callers
-    void StartSession(const uint64_t uid, const F123::ETrackId trackId, const F123::ESessionType sessionType)
+    void StartSession(const F1::Version version, const uint64_t uid, const int8_t trackId, const uint8_t sessionType)
     {
         SPDLOG_INFO("Starting session: {}", uid);
+        std::string trackName{""};
         mActiveSessionUid = uid;
 
-        if (F123::sSessionTypeToString.find(sessionType) == F123::sSessionTypeToString.end())
-        {
-            SPDLOG_WARN("Could not find session type {}", (uint8_t)sessionType);
-        }
+        mSessionActive = true;
 
-        mRecord = true;
-        auto trackName = F123::sTrackIdToString.at(trackId);
-
+        trackName = F1::TrackIdToString(version, trackId);
         SPDLOG_DEBUG("Track {}", trackName);
 
         // Find proper race week, if exists
@@ -249,6 +245,7 @@ public:
                 // New session for last weekend
                 SPDLOG_DEBUG("Creating new session for existing weekend at {}", trackName);
                 SessionStorage::SSessionData newSession;
+                newSession.version = version;
                 newSession.uid = uid;
                 newSession.sessionType = sessionType;
                 mRaces.at(mRaces.size() - 1).sessions.push_back(newSession);
@@ -263,9 +260,9 @@ public:
                 newWeekend.date = std::string(ctime(&now));
 
                 SessionStorage::SSessionData newSession;
+                newSession.version = version;
                 newSession.uid = uid;
                 newSession.sessionType = sessionType;
-
                 newWeekend.sessions.push_back(newSession);
                 mRaces.push_back(newWeekend);
             }
@@ -282,13 +279,13 @@ public:
 
     void StopSession()
     {
-        mRecord = false;
+        mSessionActive = false;
         mActiveSessionUid = 0;
     }
 
     bool SessionActive()
     {
-        return mRecord;
+        return mSessionActive;
     }
 
     uint16_t ActiveSessionUid()
@@ -296,11 +293,11 @@ public:
         return mActiveSessionUid;
     }
 
-    void ShowSessionHistory(bool *p_open)
+    void ShowSessionHistory(const ImVec2 spaceAvail)
     {
         IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!");
         static int clicked = 0;
-        if (ImGui::BeginTable("SessionHistory", 5, sTableFlags))
+        if (ImGui::BeginTable("SessionHistory", 5, sTableFlags, ImVec2(spaceAvail.x, (spaceAvail.y - 40)))) // TODO: bad. -40 for save button
         {
             ImGui::PushFont(mTableHeaderFont);
             ImGui::TableSetupColumn("Track", ImGuiTableColumnFlags_NoHide);
@@ -354,21 +351,15 @@ public:
                             sessionFlags |= ImGuiTreeNodeFlags_DefaultOpen;
                         }
 
-                        ImGui::PushFont(mSessionHeaderFont);
-
-                        // TODO: Getting session type 15 which does not exist? Maybe when race is quit then resumed?
-                        std::string sessionTypeStr;
-                        if (F123::sSessionTypeToString.find(session->sessionType) == F123::sSessionTypeToString.end())
+                        auto sessionTypeStr = F1::SessionTypeToString(session->version, session->sessionType);
+                        // Didn't find the string version, just cast to string
+                        if (sessionTypeStr.empty())
                         {
                             sessionTypeStr = std::to_string((uint8_t)session->sessionType);
                         }
-                        else
-                        {
-                            sessionTypeStr = F123::sSessionTypeToString.at(session->sessionType);
-                        }
 
                         const std::string sessionHeaderStr = sessionTypeStr + " [" + std::to_string(session->uid) + "]";
-
+                        ImGui::PushFont(mSessionHeaderFont);
                         bool open = ImGui::TreeNodeEx(sessionHeaderStr.c_str(), sessionFlags);
                         ImGui::PopFont();
                         if (open)
@@ -422,7 +413,7 @@ public:
                 raceWeek++;
             }
             ImGui::EndTable();
-            ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - 35);
+            ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - 40);
             if (ImGui::Button("Save"))
             {
                 clicked++;
@@ -448,7 +439,7 @@ private:
 
     // Local race history
     uint64_t mActiveSessionUid{0};
-    bool mRecord{false};
+    bool mSessionActive{false};
     std::vector<SessionStorage::SRaceWeekend> mRaces;
 
     // Fonts

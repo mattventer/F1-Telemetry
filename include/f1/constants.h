@@ -3,15 +3,17 @@
 #include "imgui.h"
 #include "implot.h"
 #include "f123/constants.h"
+#include "f125/constants.h"
 
 #include <cstdint>
 
 namespace F1
 {
-    enum class Version
+    enum class Version : int8_t
     {
-        F123,
-        F125
+        UNKNOWN = -1,
+        F123 = 0,
+        F125 = 1
     };
 
     constexpr int sMinY = 0;
@@ -229,5 +231,67 @@ namespace F1
         default:
             return blue; // Just to have something
         }
+    }
+
+    std::string SessionTypeToString(Version version, uint8_t sessionType)
+    {
+        std::string sessionTypeStr{""};
+
+        switch (version)
+        {
+        case Version::F123:
+        {
+            auto iter = F123::sSessionTypeToString.find(static_cast<F123::ESessionType>(sessionType));
+            if (iter != F123::sSessionTypeToString.end())
+            {
+                sessionTypeStr = iter->second;
+            }
+            break;
+        }
+        case Version::F125:
+        {
+            auto iter = F125::sSessionTypeToString.find(static_cast<F125::ESessionType>(sessionType));
+            if (iter != F125::sSessionTypeToString.end())
+            {
+                sessionTypeStr = iter->second;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+
+        return sessionTypeStr;
+    }
+
+    std::string TrackIdToString(Version version, int8_t trackId)
+    {
+        std::string trackIdStr{""};
+
+        switch (version)
+        {
+        case Version::F123:
+        {
+            auto iter = F123::sTrackIdToString.find(static_cast<F123::ETrackId>(trackId));
+            if (iter != F123::sTrackIdToString.end())
+            {
+                trackIdStr = iter->second;
+            }
+            break;
+        }
+        case Version::F125:
+        {
+            auto iter = F125::sTrackIdToString.find(static_cast<F125::ETrackId>(trackId));
+            if (iter != F125::sTrackIdToString.end())
+            {
+                trackIdStr = iter->second;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+
+        return trackIdStr;
     }
 }
