@@ -146,10 +146,9 @@ public:
         }
 
         // Find proper race week
-        std::tuple<int, int> location = FindSession(mySessionData.header.sessionUid);
-        auto raceIdx = std::get<0>(location);
-        auto sessionIdx = std::get<1>(location);
-        SPDLOG_TRACE("New session data: uid {}, raceIdx {}, sessionIdx {}", mySessionData.header.sessionUid, raceIdx, sessionIdx);
+        std::tuple<int, int> sessionLocation = FindSession(mySessionData.header.sessionUid);
+        int raceIdx = std::get<0>(sessionLocation);
+        int sessionIdx = std::get<1>(sessionLocation);
 
         // Session doesn't exist
         // TODO: Seems I wrote this this expecting the session to already exist? Could just create it here...
@@ -160,13 +159,13 @@ public:
         }
 
         uint8_t lapNum = mySessionData.numLaps;                                  // Incoming lap info
-        auto currLapIdx = lapNum - 1;                                            // Index this lap relates to
+        int currLapIdx = lapNum - 1;                                             // Index this lap relates to
         int lapsStored = mRaces.at(raceIdx).sessions.at(sessionIdx).laps.size(); // How many laps have we stored already?
 
         // Need to add a new lap
         if (lapNum > lapsStored)
         {
-            SPDLOG_TRACE("{} {} new laps to store", mRaces.at(raceIdx).trackName, (lapNum - lapsStored));
+            SPDLOG_TRACE("{} got lap {} data", mRaces.at(raceIdx).trackName, lapNum);
 
             // Store all new laps
             for (int i = lapsStored; i < lapNum; ++i)
@@ -218,19 +217,19 @@ public:
     // TODO: Make more generic for both 23/25 callers
     void StartSession(const F1::Version version, const uint64_t uid, const int8_t trackId, const uint8_t sessionType)
     {
-        SPDLOG_INFO("Starting session: {}", uid);
         std::string trackName{""};
+        std::tuple<int, int> sessionLocation;
+        int raceIdx = -1, sessionIdx = -1;
         mActiveSessionUid = uid;
-
         mSessionActive = true;
 
         trackName = F1::TrackIdToString(version, trackId);
-        SPDLOG_DEBUG("Track {}", trackName);
+        SPDLOG_DEBUG("Starting session: {} {}", trackName, uid);
 
         // Find proper race week, if exists
-        std::tuple<int, int> location = FindSession(uid);
-        auto raceIdx = std::get<0>(location);
-        auto sessionIdx = std::get<1>(location);
+        sessionLocation = FindSession(uid);
+        raceIdx = std::get<0>(sessionLocation);
+        sessionIdx = std::get<1>(sessionLocation);
 
         // Already have this session, don't create a new one
         if (sessionIdx > -1)
@@ -465,17 +464,12 @@ private:
                 {
                     if (session.uid == uid)
                     {
-                        SPDLOG_TRACE("Found existing session. raceIdx {}, sessionIdx {}", raceIdx, sessionIdx);
                         return std::tuple(raceIdx, sessionIdx);
                     }
                     sessionIdx++;
                 }
                 raceIdx++;
             }
-        }
-        else
-        {
-            SPDLOG_TRACE("Session {} does not exist", uid);
         }
 
         return std::tuple(-1, -1); // Does not exist

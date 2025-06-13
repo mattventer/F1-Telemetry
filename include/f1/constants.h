@@ -50,11 +50,11 @@ namespace F1
         {
             return green;
         }
-        if (wear < 60)
+        if (wear < 65)
         {
             return yellow;
         }
-        if (wear < 70)
+        if (wear < 75)
         {
             return orange;
         }
